@@ -11,7 +11,6 @@
 
 // functions
 
-extern void search_init ();
 extern void search_full_init (list_t * list, board_t * board);
 extern int  search_full_root (list_t * list, board_t * board, int depth, int search_type);
 

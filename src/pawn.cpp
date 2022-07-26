@@ -17,7 +17,6 @@
 
 // constants
 
-//static const bool UseTable = true;
 static const uint32 TableSize = 16384; // 256kB
 
 // types
@@ -37,28 +36,34 @@ struct pawn_t {
 
 // constants and variables
 
-//static /* const */ int PawnStructureWeight = 256; // 100%
+static /* const */ int PawnStructureWeight = 256; // 100%
+/*
+static const int DoubledOpening = 10;
+static const int DoubledEndgame = 20;
 
-static int PawnDuoOpening = 6;
-static int PawnDuoEndgame = 6;
+static const int IsolatedOpening = 10;
+static const int IsolatedOpeningOpen = 20;
+static const int IsolatedEndgame = 20;
 
-static /*const*/ int DoubledOpening = 10;
-static /*const*/ int DoubledEndgame = 20;
-//static const int DoubledOpening[8] {0, 10, 22, 36, 52, 70, 90, 112 };
-//static const int DoubledEndgame[8] {0, 18, 40, 68, 100, 136, 176, 220 };
+static const int BackwardOpening = 8;
+static const int BackwardOpeningOpen = 16;
+static const int BackwardEndgame = 10;
+*/
+static const int DoubledOpening[8] = {10,10,10,12,12,10,10,10};
+static const int DoubledEndgame[8] = {18,18,18,20,20,18,18,18};
 
-static /*const*/ int IsolatedOpening = 12;
-static /*const*/ int IsolatedOpeningOpen = 16; //20
-static /*const*/ int IsolatedEndgame = 20;
+static const int IsolatedOpening[8] =		{ 8, 9,10,12,12,10, 9, 8};
+static const int IsolatedOpeningOpen[8] =	{18,19,20,22,22,20,19,18};
+static const int IsolatedEndgame[8] =		{18,19,20,22,22,20,19,18};
 
-static /*const*/ int BackwardOpening = 8;
-static /*const*/ int BackwardOpeningOpen = 12; //16
-static /*const*/ int BackwardEndgame = 12;
+static const int BackwardOpening[8] =		{ 6, 7, 8,10,10, 8, 7, 6};
+static const int BackwardOpeningOpen[8] =	{12,14,16,18,18,16,14,12}; 
+static const int BackwardEndgame[8] =		{ 8, 9,10,12,12,10, 9, 8};
 
-static /*const*/ int CandidateOpeningMin = 5; // 5
-static /*const*/ int CandidateOpeningMax = 55; // 55
-static /*const*/ int CandidateEndgameMin = 10; // 10
-static /*const*/ int CandidateEndgameMax = 110; // 110
+static const int CandidateOpeningMin = 5;
+static const int CandidateOpeningMax = 55;
+static const int CandidateEndgameMin = 10;
+static const int CandidateEndgameMax = 110;
 
 // this was moved to eval.cpp
 
@@ -158,33 +163,6 @@ void pawn_init_bit() {
    }
 }
 
-// pawn_inti_uci
-
-void pawn_init_uci() {
-   // UCI options
-
-   //PawnStructureWeight = (option_get_int("Pawn Structure") * 256 + 50) / 100;
-   PawnDuoOpening = option_get_int("Pawn Duo Opening");
-   PawnDuoEndgame = option_get_int("Pawn Duo Opening");
-
-   DoubledOpening = option_get_int("Pawn Doubled Opening");
-   DoubledEndgame = option_get_int("Pawn Doubled Endgame");
-
-   IsolatedOpening = option_get_int("Pawn Isolated Opening");
-   IsolatedOpeningOpen = option_get_int("Pawn Isolated Opening Open");
-   IsolatedEndgame = option_get_int("Pawn Isolated Endgame");
-
-   BackwardOpening = option_get_int("Pawn Backward Opening");
-   BackwardOpeningOpen = option_get_int("Pawn Backward Opening Open");
-   BackwardEndgame = option_get_int("Pawn Backward Endgame");
-
-   CandidateOpeningMin = option_get_int("Pawn Candidate Opening Min");
-   CandidateOpeningMax = option_get_int("Pawn Candidate Opening Max");
-   CandidateEndgameMin = option_get_int("Pawn Candidate Endgame Min");
-   CandidateEndgameMax = option_get_int("Pawn Candidate Endgame Max");
-
-}
-
 // pawn_init()
 
 void pawn_init() {
@@ -193,7 +171,7 @@ void pawn_init() {
 
    // UCI options
 
-   pawn_init_uci();
+   PawnStructureWeight = (option_get_int("Pawn Structure") * 256 + 50) / 100;
 
    // bonus
 
@@ -217,14 +195,13 @@ void pawn_alloc() {
 
    ASSERT(sizeof(entry_t)==16);
 
-   //if (UseTable) {
 
-      Pawn->size = TableSize;
-      Pawn->mask = TableSize - 1;
-      Pawn->table = (entry_t *) my_malloc(Pawn->size*sizeof(entry_t));
+   Pawn->size = TableSize;
+   Pawn->mask = TableSize - 1;
+   Pawn->table = (entry_t *) my_malloc(Pawn->size*sizeof(entry_t));
 
-      pawn_clear();
-   //}
+   pawn_clear();
+   
 }
 
 // pawn_clear()
@@ -254,14 +231,13 @@ void pawn_get_info(pawn_info_t * info, const board_t * board) {
 
    // probe
 
-   //if (UseTable) {
 
-      Pawn->read_nb++;
+   Pawn->read_nb++;
 
-      key = board->pawn_key;
-      entry = &Pawn->table[KEY_INDEX(key)&Pawn->mask];
+   key = board->pawn_key;
+   entry = &Pawn->table[KEY_INDEX(key)&Pawn->mask];
 
-      if (entry->lock == KEY_LOCK(key)) {
+   if (entry->lock == KEY_LOCK(key)) {
 
          // found
 
@@ -270,8 +246,8 @@ void pawn_get_info(pawn_info_t * info, const board_t * board) {
          *info = *entry;
 
          return;
-      }
-   //}
+   }
+   
 
    // calculation
 
@@ -279,19 +255,18 @@ void pawn_get_info(pawn_info_t * info, const board_t * board) {
 
    // store
 
-   //if (UseTable) {
+   
+   Pawn->write_nb++;
 
-      Pawn->write_nb++;
-
-      if (entry->lock == 0) { // HACK: assume free entry
+   if (entry->lock == 0) { // HACK: assume free entry
          Pawn->used++;
-      } else {
+   } else {
          Pawn->write_collision++;
-      }
+   }
 
-      *entry = *info;
-      entry->lock = KEY_LOCK(key);
-   //}
+   *entry = *info;
+   entry->lock = KEY_LOCK(key);
+   
 }
 
 // pawn_comp_info()
@@ -307,13 +282,14 @@ static void pawn_comp_info(pawn_info_t * info, const board_t * board) {
    int t1, t2;
    int n;
    int bits;
-   int opening[ColourNb], endgame[ColourNb];
-   int flags[ColourNb];
    int file_bits[ColourNb];
-   int passed_bits[ColourNb];
-   int single_file[ColourNb];
-   int wsp[ColourNb];
-   int badpawns[ColourNb];
+   sint16 opening[ColourNb], endgame[ColourNb];
+   uint8 flags[ColourNb];
+   uint8 passed_bits[ColourNb];
+   uint8 single_file[ColourNb];
+   uint8 wsp[ColourNb];
+   uint8 badpawns[ColourNb];
+
 
    ASSERT(info!=NULL);
    ASSERT(board!=NULL);
@@ -350,15 +326,12 @@ static void pawn_comp_info(pawn_info_t * info, const board_t * board) {
 
    // init
 
-   //for (colour = 0; colour < ColourNb; colour++) {
+   opening[0] = opening[1] = endgame[0] = endgame[1] = 0;
 
-      opening[0] = opening[1] = endgame[0] = endgame[1] = 0;
-
-      flags[0] = flags[1] = wsp[0] = wsp[1] = badpawns[0] = badpawns[1] = 0;
-      file_bits[0] = file_bits[1] = 0;
-      passed_bits[0] = passed_bits[1] = 0;
-      single_file[0] = single_file[1] = SquareNone;
-   //}
+   flags[0] = flags[1] = wsp[0] = wsp[1] = badpawns[0] = badpawns[1] = 0;
+   file_bits[0] = file_bits[1] = 0;
+   passed_bits[0] = passed_bits[1] = 0;
+   single_file[0] = single_file[1] = SquareNone;
 
    // features and scoring
 
@@ -382,8 +355,6 @@ static void pawn_comp_info(pawn_info_t * info, const board_t * board) {
          file_bits[me] |= BIT(file);
          if (rank == Rank2) flags[me] |= BackRankFlag;
 
-	 if (SQUARE_COLOUR(sq) == White) wsp[me]++;
-
          // features
 
          backward = false;
@@ -396,12 +367,14 @@ static void pawn_comp_info(pawn_info_t * info, const board_t * board) {
          t1 = board->pawn_file[me][file-1] | board->pawn_file[me][file+1];
          t2 = board->pawn_file[me][file] | BitRev[board->pawn_file[opp][file]];
 
+	 // square colour
+	 if (SQUARE_COLOUR(sq) == White) wsp[me]++;
+
 	 // pawn duo
 	 if (BIT_COUNT(BitRev[board->pawn_file[me][file+1]]&BitEQ[rank])) {
-		opening[me] += PawnDuoOpening;
-		endgame[me] += PawnDuoEndgame;
+		opening[me] += 6;
+		endgame[me] += 6;
 	 }
-
 
          // doubled
 
@@ -486,94 +459,47 @@ static void pawn_comp_info(pawn_info_t * info, const board_t * board) {
          // score
 
          if (doubled) {
-            opening[me] -= DoubledOpening;
-            endgame[me] -= DoubledEndgame;
+            opening[me] -= DoubledOpening[file-FileA];
+            endgame[me] -= DoubledEndgame[file-FileA];
          }
 
          if (isolated) {
             if (open) {
-               opening[me] -= IsolatedOpeningOpen;
-               endgame[me] -= IsolatedEndgame;
-				switch (file) {
-					case FileA:
-						badpawns[me] |= BadPawnFileA;
-						break;
-
-					case FileB:
-						badpawns[me] |= BadPawnFileB;
-						break;
-
-					case FileC:
-						badpawns[me] |= BadPawnFileC;
-						break;
-
-					case FileD:
-						badpawns[me] |= BadPawnFileD;
-						break;
-
-					case FileE:
-						badpawns[me] |= BadPawnFileE;
-						break;
-
-					case FileF:
-						badpawns[me] |= BadPawnFileF;
-						break;
-
-					case FileG:
-						badpawns[me] |= BadPawnFileG;
-						break;
-
-					case FileH:
-						badpawns[me] |= BadPawnFileH;
-						break;
-				}
+               opening[me] -= IsolatedOpeningOpen[file-FileA];
+               endgame[me] -= IsolatedEndgame[file-FileA];
+	       switch (file) {
+		   case FileA: badpawns[me] |= BadPawnFileA; break;
+		   case FileB: badpawns[me] |= BadPawnFileB; break;
+		   case FileC: badpawns[me] |= BadPawnFileC; break;
+		   case FileD: badpawns[me] |= BadPawnFileD; break;
+		   case FileE: badpawns[me] |= BadPawnFileE; break;
+		   case FileF: badpawns[me] |= BadPawnFileF; break;
+		   case FileG: badpawns[me] |= BadPawnFileG; break;
+		   case FileH: badpawns[me] |= BadPawnFileH; break;
+	      }
             } else {
-               opening[me] -= IsolatedOpening;
-               endgame[me] -= IsolatedEndgame;
+               opening[me] -= IsolatedOpening[file-FileA];
+               endgame[me] -= IsolatedEndgame[file-FileA];
             }
          }
 
          if (backward) {
             if (open) {
-               opening[me] -= BackwardOpeningOpen;
-               endgame[me] -= BackwardEndgame;
-				switch (file) {
-					case FileA:
-						badpawns[me] |= BadPawnFileA;
-						break;
-
-					case FileB:
-						badpawns[me] |= BadPawnFileB;
-						break;
-
-					case FileC:
-						badpawns[me] |= BadPawnFileC;
-						break;
-
-					case FileD:
-						badpawns[me] |= BadPawnFileD;
-						break;
-
-					case FileE:
-						badpawns[me] |= BadPawnFileE;
-						break;
-
-					case FileF:
-						badpawns[me] |= BadPawnFileF;
-						break;
-
-					case FileG:
-						badpawns[me] |= BadPawnFileG;
-						break;
-
-					case FileH:
-						badpawns[me] |= BadPawnFileH;
-						break;
-				}
-
+               opening[me] -= BackwardOpeningOpen[file-FileA];
+               endgame[me] -= BackwardEndgame[file-FileA];
+	       switch (file) {
+		   case FileA: badpawns[me] |= BadPawnFileA; break;
+		   case FileB: badpawns[me] |= BadPawnFileB; break;
+		   case FileC: badpawns[me] |= BadPawnFileC; break;
+		   case FileD: badpawns[me] |= BadPawnFileD; break;
+		   case FileE: badpawns[me] |= BadPawnFileE; break;
+		   case FileF: badpawns[me] |= BadPawnFileF; break;
+		   case FileG: badpawns[me] |= BadPawnFileG; break;
+		   case FileH: badpawns[me] |= BadPawnFileH; break;
+	      }
             } else {
-               opening[me] -= BackwardOpening;
-               endgame[me] -= BackwardEndgame;
+               opening[me] -= BackwardOpening[file-FileA];
+               endgame[me] -= BackwardEndgame[file-FileA];
             }
          }
 
@@ -595,17 +521,10 @@ static void pawn_comp_info(pawn_info_t * info, const board_t * board) {
 
    // store info
 
-   info->opening = /*(*/(opening[White] - opening[Black])/* * PawnStructureWeight) / 256*/;
-   info->endgame = /*(*/(endgame[White] - endgame[Black])/* * PawnStructureWeight) / 256*/;
+   info->opening = ((opening[White] - opening[Black]) * PawnStructureWeight) / 256;
+   info->endgame = ((endgame[White] - endgame[Black]) * PawnStructureWeight) / 256;
 
-   //for (colour = 0; colour < ColourNb; colour++) {
-
-      //me = colour;
-      //opp = COLOUR_OPP(me);
-
-      // draw flags
-
-      bits = file_bits[0];
+       bits = file_bits[0];
 
       if (bits != 0 && (bits & (bits-1)) == 0) { // one set bit
 
@@ -644,7 +563,7 @@ static void pawn_comp_info(pawn_info_t * info, const board_t * board) {
       info->badpawns[1] = badpawns[1];
       info->wsp[0] = wsp[0];
       info->wsp[1] = wsp[1];
-	  //}
+
 }
 
 // quad()

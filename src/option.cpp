@@ -26,102 +26,84 @@ static option_t Option[] = {
 
    { "Hash", true, "16", "spin", "min 4 max 1024", NULL },
 
+   // JAS
+   // search X seconds for the best move, equal to "go movetime"
+   { "Search Time",  true, "0",   "spin",  "min 0 max 3600", NULL },
+   // search X plies deep, equal to "go depth"
+   { "Search Depth",  true, "0",   "spin",  "min 0 max 20", NULL },
+   // JAS end
+
    { "Ponder", true, "false", "check", "", NULL },
 
    { "OwnBook",  true, "true",           "check",  "", NULL },
    { "BookFile", true, "book_small.bin", "string", "", NULL },
+   { "MultiPV", true, "1", "spin",  "min 1 max 10", NULL },
 
-   { "Extension cap",     true, "16",        "spin",  "min 16 max 48", NULL },
+   { "Bitbase pieces", true, "4", "spin",  "min 3 max 4", NULL },
 
-   { "Check extension level",   true, "16",   "spin",  "min 0 max 32", NULL },
-   { "Recap extension level",   true, "16",   "spin",  "min 0 max 32", NULL },
-   { "Pawn to 7th extension level",   true, "16",   "spin",  "min 0 max 32", NULL },
-   { "Threat extension level",   true, "16",  "spin",  "min 0 max 32", NULL },
-   { "Single reply extension level",   true, "8",  "spin",  "min 0 max 32", NULL },
-
-   { "Use same threat extensions",     true, "true", "check", "", NULL },
-   { "Exclude Same threat from cap",  true, "true",           "check",  "", NULL },
-
-   { "Same threat extensions level",   true, "8",  "spin",  "min -16 max 16", NULL },
-
-   { "NullMove Pruning",   true, "Always", "combo", "var Always var Fail High var Never", NULL },
-   { "NullMove Reduction",     true, "3",         "spin",  "min 1 max 3", NULL },
+   { "NullMove Pruning",       true, "Always", "combo", "var Always var Fail High var Never", NULL },
+   { "NullMove Reduction",     true, "3",         "spin",  "min 1 max 4", NULL },
    { "Verification Search",    true, "Always",   "combo", "var Always var Endgame var Never", NULL },
    { "Verification Reduction", true, "5",         "spin",  "min 1 max 6", NULL },
 
    { "History Pruning",     true, "true", "check", "", NULL },
-   { "History Threshold",   true, "60",   "spin",  "min 0 max 100", NULL },
+   { "History Threshold",   true, "70",   "spin",  "min 0 max 100", NULL },
+   { "History Research on Beta",     true, "true", "check", "", NULL },
 
-   { "Rebel Reduction",     true, "false", "check", "", NULL },
+   { "Rebel Reductions",     true, "false", "check", "", NULL },
 
    { "Futility Pruning", true, "true", "check", "", NULL },
-   { "Futility Margin (Depth=1)",  true, "300",   "spin",  "min 0 max 3500", NULL },
-   { "Futility Margin (Depth=2)",  true, "500",   "spin",  "min 0 max 3500", NULL },
-   { "Futility Margin (Depth=3)",  true, "975",   "spin",  "min 0 max 3500", NULL },
+   { "Quick Futility eval", true, "false", "check", "", NULL },
+   { "Futility Margin",  true, "125",   "spin",  "min 0 max 500", NULL },
+   { "Extended Futility Margin",  true, "325",   "spin",  "min 0 max 900", NULL },
 
-   { "Delta Pruning", true, "false", "check", "", NULL },
-   { "Delta Margin",  true, "50",    "spin",  "min 0 max 1000", NULL },
+   { "Delta Pruning", true, "true", "check", "", NULL },
+   { "Delta Margin",  true, "50",    "spin",  "min 0 max 500", NULL },
 
    { "Quiescence Check Plies", true, "1", "spin", "min 0 max 2", NULL },
 
-   { "Piece Activity",  true, "100", "spin", "min 0 max 400", NULL },
-   { "King Safety",     true, "100", "spin", "min 0 max 400", NULL },
-   { "Passed Pawns",    true, "100", "spin", "min 0 max 400", NULL },
-   { "Pawn square table weight",  true, "100", "spin", "min 0 max 400", NULL },
+   { "Alt Pawn SQT", true, "false", "check", "", NULL },
+   { "Alt Knight SQT", true, "false", "check", "", NULL },
+   { "Alt Bishop SQT", true, "false", "check", "", NULL },
 
-   { "Use King Tropism", 	true, "true", "check", "", NULL },
-   { "knight tropism",  	true, "4",    "spin",  "min 0 max 10", NULL },
-   { "bishop tropism",  	true, "2",    "spin",  "min 0 max 10", NULL },
-   { "rook tropism",  		true, "2",    "spin",  "min 0 max 10", NULL },
-   { "queen tropism",  		true, "4",    "spin",  "min 0 max 10", NULL },
+   { "Chess Knowledge", true, "100", "spin", "min 0 max 500", NULL },
+   { "Piece Activity",  true, "100", "spin", "min 0 max 500", NULL },
+   { "Pawn Shelter",    true, "100", "spin", "min 0 max 500", NULL },
+   { "King Safety",     true, "100", "spin", "min 0 max 500", NULL },
+   { "Pawn Structure",  true, "100", "spin", "min 0 max 500", NULL },
+   { "Passed Pawns",    true, "100", "spin", "min 0 max 500", NULL },
 
-   { "Fruit Lazy Eval", true, "true", "check", "", NULL },
-   { "Fruit Lazy Eval Margin",  true, "200",    "spin",  "min 0 max 900", NULL },
-   { "Fruit Exchange Bonus",  true, "30",    "spin",  "min 0 max 100", NULL }, 
-   { "Fruit King Safety", true, "true", "check", "", NULL },
-   { "Fruit King Safety Margin",  true, "1600",    "spin",  "min 500 max 2500", NULL },
+   { "knight tropism opening",  	true, "4",    "spin",  "min 0 max 10", NULL },
+   { "bishop tropism opening",  	true, "2",    "spin",  "min 0 max 10", NULL },
+   { "rook tropism opening",  		true, "2",    "spin",  "min 0 max 10", NULL },
+   { "queen tropism opening",  		true, "3",    "spin",  "min 0 max 10", NULL },
 
-   { "Opening Pawn Value",	true, "90", "spin", "min 0 max 1000", NULL },
-   { "Opening Knight Value",	true, "320", "spin", "min 0 max 1000", NULL },
-   { "Opening Bishop Value",	true, "325", "spin", "min 0 max 1000", NULL },
-   { "Opening Rook Value",	true, "500", "spin", "min 0 max 1000", NULL },
-   { "Opening Queen Value",	true, "975", "spin", "min 0 max 1000", NULL },
+   { "knight tropism endgame",  	true, "2",    "spin",  "min 0 max 10", NULL },
+   { "bishop tropism endgame",  	true, "1",    "spin",  "min 0 max 10", NULL },
+   { "rook tropism endgame",  		true, "1",    "spin",  "min 0 max 10", NULL },
+   { "queen tropism endgame",  		true, "3",    "spin",  "min 0 max 10", NULL },
 
-   { "Endgame Pawn Value",	true, "100", "spin", "min 0 max 1000", NULL },
-   { "Endgame Knight Value",	true, "320", "spin", "min 0 max 1000", NULL },
-   { "Endgame Bishop Value",	true, "325", "spin", "min 0 max 1000", NULL },
-   { "Endgame Rook Value",	true, "500", "spin", "min 0 max 1000", NULL },
-   { "Endgame Queen Value",	true, "975", "spin", "min 0 max 1000", NULL },
+   { "Opening Pawn Value",	true, "80", "spin", "min 0 max 10000", NULL },
+   { "Opening Knight Value",	true, "320", "spin", "min 0 max 10000", NULL },
+   { "Opening Bishop Value",	true, "325", "spin", "min 0 max 10000", NULL },
+   { "Opening Rook Value",	true, "500", "spin", "min 0 max 10000", NULL },
+   { "Opening Queen Value",	true, "975", "spin", "min 0 max 10000", NULL },
+
+   { "Endgame Pawn Value",	true, "90", "spin", "min 0 max 10000", NULL },
+   { "Endgame Knight Value",	true, "320", "spin", "min 0 max 10000", NULL },
+   { "Endgame Bishop Value",	true, "325", "spin", "min 0 max 10000", NULL },
+   { "Endgame Rook Value",	true, "500", "spin", "min 0 max 10000", NULL },
+   { "Endgame Queen Value",	true, "975", "spin", "min 0 max 10000", NULL },
 
    { "Bishop Pair Opening",	true, "50", "spin", "min 0 max 1000", NULL },
    { "Bishop Pair Endgame",	true, "50", "spin", "min 0 max 1000", NULL },
 
-   { "Queen Knight combo", 	true, "20", "spin", "min 0 max 1000", NULL },
-   { "Rook Bishop combo",	true, "20", "spin", "min 0 max 1000", NULL },
+   { "Queen Knight combo", 	true, "15", "spin", "min 0 max 1000", NULL },
+   { "Rook Bishop combo",	true, "15", "spin", "min 0 max 1000", NULL },
 
-   { "Rook on bad pawn file opening bonus", 	true, "8", "spin", "min 0 max 100", NULL },
-   { "Rook on bad pawn file endgame bonus",	true, "8", "spin", "min 0 max 100", NULL },
+   { "Bad Trade Value",  true, "50",    "spin",  "min 0 max 1000", NULL }, 
 
-   { "Pawn Duo Opening", 	true, "6", "spin", "min 0 max 100", NULL },
-   { "Pawn Duo Endgame",	true, "6", "spin", "min 0 max 100", NULL },
-
-   { "Pawn Doubled Opening", 	true, "10", "spin", "min 0 max 100", NULL },
-   { "Pawn Doubled Endgame",	true, "20", "spin", "min 0 max 100", NULL },
-
-   { "Pawn Isolated Opening", 	true, "12", "spin", "min 0 max 100", NULL },
-   { "Pawn Isolated Opening Open",true, "16", "spin", "min 0 max 100", NULL },
-   { "Pawn Isolated Endgame", 	true, "20", "spin", "min 0 max 100", NULL },
-
-   { "Pawn Backward Opening",	true, "8", "spin", "min 0 max 100", NULL },
-   { "Pawn Backward Opening Open",true, "12", "spin", "min 0 max 100", NULL },
-   { "Pawn Backward Endgame",	true, "12", "spin", "min 0 max 100", NULL },
-
-   { "Pawn Candidate Opening Min", 	true, "5", "spin", "min 0 max 500", NULL },
-   { "Pawn Candidate Opening Max",	true, "55", "spin", "min 0 max 500", NULL },
-   { "Pawn Candidate Endgame Min", 	true, "10", "spin", "min 0 max 500", NULL },
-   { "Pawn Candidate Endgame Max",	true, "110", "spin", "min 0 max 500", NULL },
-
-   { "Contempt Factor", 	true, "0",    "spin",  "min -1000 max 1000", NULL },
+   { "Contempt Factor",	true, "0", "spin", "min -1000 max 1000", NULL },
 
    { NULL, false, NULL, NULL, NULL, NULL, },
 };

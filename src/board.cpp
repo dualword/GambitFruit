@@ -436,8 +436,8 @@ bool board_is_stalemate(board_t * board) {
 
 bool board_is_repetition(const board_t * board) {
 
-   int i;
-
+   int i, z;
+   
    ASSERT(board!=NULL);
 
    // 50-move rule
@@ -453,9 +453,11 @@ bool board_is_repetition(const board_t * board) {
    // position repetition
 
    ASSERT(board->sp>=board->ply_nb);
-
+   //z = 0;
    for (i = 4; i <= board->ply_nb; i += 2) {
-      if (board->stack[board->sp-i] == board->key) return true;
+       if (board->stack[board->sp-i] == board->key) return true;
+	   //if (board->stack[board->sp-i] == board->key) z++;
+	   //if (z >= 2) return true; // value 2 for 3-Times Repetition
    }
 
    return false;

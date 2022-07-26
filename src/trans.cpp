@@ -18,11 +18,7 @@
 
 // constants
 
-#if SMP && HAVE_LIBPTHREAD
-static pthread_mutex_t TranspositionMutex = PTHREAD_MUTEX_INITIALIZER;
-#endif
-
-static const bool UseModulo = false; // was false
+static const bool UseModulo = false;
 
 static const int DateSize = 16;
 
@@ -246,7 +242,7 @@ void trans_store(trans_t * trans, uint64 key, int move, int depth, int min_value
 
    entry_t * entry, * best_entry;
    int score, best_score;
-   //int i;
+   int i;
 
    ASSERT(trans_is_ok(trans));
    ASSERT(move>=0&&move<65536);
@@ -256,9 +252,6 @@ void trans_store(trans_t * trans, uint64 key, int move, int depth, int min_value
    ASSERT(min_value<=max_value);
 
    // init
-   #if SMP && HAVE_LIBPTHREAD
-   pthread_mutex_lock(&TranspositionMutex);
-   #endif 
 
    trans->write_nb++;
 
@@ -269,6 +262,7 @@ void trans_store(trans_t * trans, uint64 key, int move, int depth, int min_value
 
    entry = trans_entry(trans,key);
 
+   for (i = 0; i < ClusterSize; i++, entry++) {
 
       if (entry->lock == KEY_LOCK(key)) {
 
@@ -302,9 +296,6 @@ void trans_store(trans_t * trans, uint64 key, int move, int depth, int min_value
 
          ASSERT(entry_is_ok(entry));
 
-	 #if SMP && HAVE_LIBPTHREAD
-    	 pthread_mutex_unlock(&TranspositionMutex);
-	 #endif
          return;
       }
 
@@ -317,158 +308,7 @@ void trans_store(trans_t * trans, uint64 key, int move, int depth, int min_value
          best_entry = entry;
          best_score = score;
       }
-   
-      entry++;
-
-      if (entry->lock == KEY_LOCK(key)) {
-
-         // hash hit => update existing entry
-
-         trans->write_hit++;
-         if (entry->date != trans->date) trans->used++;
-
-         entry->date = trans->date;
-
-         if (trans_endgame || depth > entry->depth) entry->depth = depth; 
-		 /* if (depth > entry->depth)  entry->depth = depth; // for replacement scheme */
-		 
-         // if (move != MoveNone /* && depth >= entry->move_depth */) {
-		 if (move != MoveNone && (trans_endgame || depth >= entry->move_depth)) {
-            entry->move_depth = depth;
-            entry->move = move;
-         }
-
-         // if (min_value > -ValueInf /* && depth >= entry->min_depth */) {
-	     if (min_value > -ValueInf && (trans_endgame || depth >= entry->min_depth)) {
-            entry->min_depth = depth;
-            entry->min_value = min_value;
-         }
-
-         // if (max_value < +ValueInf /* && depth >= entry->max_depth */) {
-         if (max_value < +ValueInf && (trans_endgame || depth >= entry->max_depth)) {
-            entry->max_depth = depth;
-            entry->max_value = max_value;
-         }
-
-         ASSERT(entry_is_ok(entry));
-
-	 #if SMP && HAVE_LIBPTHREAD
-    	 pthread_mutex_unlock(&TranspositionMutex);
-	 #endif
-         return;
-      }
-
-      // evaluate replacement score
-
-      score = trans->age[entry->date] * 256 - entry->depth;
-      ASSERT(score>-32767);
-
-      if (score > best_score) {
-         best_entry = entry;
-         best_score = score;
-      }
-   
-      entry++;
-
-      if (entry->lock == KEY_LOCK(key)) {
-
-         // hash hit => update existing entry
-
-         trans->write_hit++;
-         if (entry->date != trans->date) trans->used++;
-
-         entry->date = trans->date;
-
-         if (trans_endgame || depth > entry->depth) entry->depth = depth; 
-		 /* if (depth > entry->depth)  entry->depth = depth; // for replacement scheme */
-		 
-         // if (move != MoveNone /* && depth >= entry->move_depth */) {
-		 if (move != MoveNone && (trans_endgame || depth >= entry->move_depth)) {
-            entry->move_depth = depth;
-            entry->move = move;
-         }
-
-         // if (min_value > -ValueInf /* && depth >= entry->min_depth */) {
-	     if (min_value > -ValueInf && (trans_endgame || depth >= entry->min_depth)) {
-            entry->min_depth = depth;
-            entry->min_value = min_value;
-         }
-
-         // if (max_value < +ValueInf /* && depth >= entry->max_depth */) {
-         if (max_value < +ValueInf && (trans_endgame || depth >= entry->max_depth)) {
-            entry->max_depth = depth;
-            entry->max_value = max_value;
-         }
-
-         ASSERT(entry_is_ok(entry));
-
-	 #if SMP && HAVE_LIBPTHREAD
-    	 pthread_mutex_unlock(&TranspositionMutex);
-	 #endif
-         return;
-      }
-
-      // evaluate replacement score
-
-      score = trans->age[entry->date] * 256 - entry->depth;
-      ASSERT(score>-32767);
-
-      if (score > best_score) {
-         best_entry = entry;
-         best_score = score;
-      }
-   
-      entry++;
-
-      if (entry->lock == KEY_LOCK(key)) {
-
-         // hash hit => update existing entry
-
-         trans->write_hit++;
-         if (entry->date != trans->date) trans->used++;
-
-         entry->date = trans->date;
-
-         if (trans_endgame || depth > entry->depth) entry->depth = depth; 
-		 /* if (depth > entry->depth)  entry->depth = depth; // for replacement scheme */
-		 
-         // if (move != MoveNone /* && depth >= entry->move_depth */) {
-		 if (move != MoveNone && (trans_endgame || depth >= entry->move_depth)) {
-            entry->move_depth = depth;
-            entry->move = move;
-         }
-
-         // if (min_value > -ValueInf /* && depth >= entry->min_depth */) {
-	     if (min_value > -ValueInf && (trans_endgame || depth >= entry->min_depth)) {
-            entry->min_depth = depth;
-            entry->min_value = min_value;
-         }
-
-         // if (max_value < +ValueInf /* && depth >= entry->max_depth */) {
-         if (max_value < +ValueInf && (trans_endgame || depth >= entry->max_depth)) {
-            entry->max_depth = depth;
-            entry->max_value = max_value;
-         }
-
-         ASSERT(entry_is_ok(entry));
-
-	 #if SMP && HAVE_LIBPTHREAD
-    	 pthread_mutex_unlock(&TranspositionMutex);
-	 #endif
-         return;
-      }
-
-      // evaluate replacement score
-
-      score = trans->age[entry->date] * 256 - entry->depth;
-      ASSERT(score>-32767);
-
-      if (score > best_score) {
-         best_entry = entry;
-         best_score = score;
-      }
-   
-
+   }
 
    // "best" entry found
 
@@ -500,21 +340,14 @@ void trans_store(trans_t * trans, uint64 key, int move, int depth, int min_value
    entry->max_value = max_value;
 
    ASSERT(entry_is_ok(entry));
-
-   #if SMP && HAVE_LIBPTHREAD
-   pthread_mutex_unlock(&TranspositionMutex);
-   #endif
 }
 
 // trans_retrieve()
-#if SMP
-bool trans_retrieve(trans_t * trans, uint64 key, int * move, int * min_depth, int * max_depth, int * min_value, int * max_value, int exclusive) {
-#else
+
 bool trans_retrieve(trans_t * trans, uint64 key, int * move, int * min_depth, int * max_depth, int * min_value, int * max_value) {
-#endif
 
    entry_t * entry;
-   //int i;
+   int i;
 
    ASSERT(trans_is_ok(trans));
    ASSERT(move!=NULL);
@@ -525,38 +358,13 @@ bool trans_retrieve(trans_t * trans, uint64 key, int * move, int * min_depth, in
 
    // init
 
-   #if SMP && HAVE_LIBPTHREAD
-   pthread_mutex_lock(&TranspositionMutex);
-   #endif   
-
    trans->read_nb++;
 
    // probe
 
    entry = trans_entry(trans,key);
 
-      if (entry->lock == KEY_LOCK(key)) {
-
-         // found
-
-         trans->read_hit++;
-         if (entry->date != trans->date) entry->date = trans->date;
-
-         *move = entry->move;
-
-         *min_depth = entry->min_depth;
-         *max_depth = entry->max_depth;
-         *min_value = entry->min_value;
-         *max_value = entry->max_value;
-
-	 #if SMP && HAVE_LIBPTHREAD
-    	 pthread_mutex_unlock(&TranspositionMutex);
-	 #endif  
-
-         return true;
-      }
-   
-      entry++;
+   for (i = 0; i < ClusterSize; i++, entry++) {
 
       if (entry->lock == KEY_LOCK(key)) {
 
@@ -572,65 +380,11 @@ bool trans_retrieve(trans_t * trans, uint64 key, int * move, int * min_depth, in
          *min_value = entry->min_value;
          *max_value = entry->max_value;
 
-	 #if SMP && HAVE_LIBPTHREAD
-    	 pthread_mutex_unlock(&TranspositionMutex);
-	 #endif  
-
          return true;
       }
-   
-      entry++;
-
-      if (entry->lock == KEY_LOCK(key)) {
-
-         // found
-
-         trans->read_hit++;
-         if (entry->date != trans->date) entry->date = trans->date;
-
-         *move = entry->move;
-
-         *min_depth = entry->min_depth;
-         *max_depth = entry->max_depth;
-         *min_value = entry->min_value;
-         *max_value = entry->max_value;
-
-	 #if SMP && HAVE_LIBPTHREAD
-    	 pthread_mutex_unlock(&TranspositionMutex);
-	 #endif  
-
-         return true;
-      }
-   
-      entry++;
-
-      if (entry->lock == KEY_LOCK(key)) {
-
-         // found
-
-         trans->read_hit++;
-         if (entry->date != trans->date) entry->date = trans->date;
-
-         *move = entry->move;
-
-         *min_depth = entry->min_depth;
-         *max_depth = entry->max_depth;
-         *min_value = entry->min_value;
-         *max_value = entry->max_value;
-
-	 #if SMP && HAVE_LIBPTHREAD
-    	 pthread_mutex_unlock(&TranspositionMutex);
-	 #endif  
-
-         return true;
-      }
-   
-
+   }
 
    // not found
-   #if SMP && HAVE_LIBPTHREAD
-   pthread_mutex_unlock(&TranspositionMutex);
-   #endif  
 
    return false;
 }

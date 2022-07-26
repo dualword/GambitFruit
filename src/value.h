@@ -15,7 +15,7 @@ const int ValuePawn   = 100;   // was 100
 const int ValueKnight = 325;   // was 300
 const int ValueBishop = 325;   // was 300
 const int ValueRook   = 500;   // was 500
-const int ValueQueen  = 975;  // was 900
+const int ValueQueen  = 1000;  // was 900
 const int ValueKing   = 10000; // was 10000
 
 const int ValueNone    = -32767;

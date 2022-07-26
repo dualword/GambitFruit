@@ -7,7 +7,6 @@
 #include "piece.h"
 #include "pst.h"
 #include "util.h"
-#include "person.h"
 
 // macros
 
@@ -24,11 +23,58 @@ static const int A6=050, B6=051, C6=052, D6=053, E6=054, F6=055, G6=056, H6=057;
 static const int A7=060, B7=061, C7=062, D7=063, E7=064, F7=065, G7=066, H7=067;
 static const int A8=070, B8=071, C8=072, D8=073, E8=074, F8=075, G8=076, H8=077;
 
+static const int alt_pawn_opening[64] = {
+	 0, 0, 0,  0,  0, 0, 0, 0,
+	 1, 2, 3, -5, -5, 3, 2, 1,
+	 3, 5, 8, 12, 12, 8, 5, 3,
+	 5, 8,13, 26, 26,13, 8, 5,
+	 7,11,18, 30, 30,18,11, 7,
+	 9,14,23, 34, 34,23,14, 9,
+	10,15,25, 35, 35,25,15,10,
+	 0, 0, 0,  0,  0, 0, 0, 0
+};
+
+static const int alt_pawn_endgame[64] = {
+	 0, 0, 0, 0, 0, 0, 0, 0,
+	 1, 2, 3, 4, 4, 1, 2, 1,
+	 3, 4, 5, 6, 6, 5, 4, 3,
+	 5, 6, 7, 8, 8, 7, 6, 5,
+	 7, 8, 9,10,10, 9, 8, 7,
+	 9,10,11,12,12,11,10, 9,
+	10,11,12,13,13,12,11,10,
+	 0, 0, 0, 0, 0, 0, 0, 0
+};
+
+static const int alt_knight[64] = {
+	-20,  0,-10,-10,-10,-10,-10,-20,
+	-10,  0,  0,  3,  3,  0,  0,-10,
+	-10,  0,  5,  5,  5,  5,  0,-10,
+	-10,  0,  5, 10, 10,  5,  0,-10,
+	-10,  0,  5, 10, 10,  5,  0,-10,
+	-10,  0,  5,  5,  5,  5,  0,-10,
+	-10,  0,  0,  3,  3,  0,  0,-10,
+	-20,-10,-10,-10,-10,-10,-10,-20
+};
+
+static const int alt_bishop[64] = {
+	-2,-2,-2,-2,-2,-2,-2,-2,
+	-2, 8, 5, 5, 5, 5, 8,-2,
+	-2, 3, 3, 5, 5, 3, 3,-2,
+	-2, 2, 5, 4, 4, 5, 2,-2,
+	-2, 2, 5, 4, 4, 5, 2,-2,
+	-2, 3, 3, 5, 5, 3, 3,-2,
+	-2, 8, 5, 5, 5, 5, 8,-2,
+	-2,-2,-2,-2,-2,-2,-2,-2
+};
+
 // constants and variables
 
 static /* const */ int PieceActivityWeight = 256; // 100%
 static /* const */ int KingSafetyWeight = 256; // 100%
 static /* const */ int PawnStructureWeight = 256; // 100%
+static bool alt_pawn_table = false;
+static bool alt_knight_table = false;
+static bool alt_bishop_table = false;
 
 static const int PawnFileOpening = 5;
 static const int KnightCentreOpening = 5;
@@ -108,15 +154,14 @@ void pst_init() {
    int piece, sq, stage;
 
    // UCI options
-if (!person.override_ucioptions) {
+
    PieceActivityWeight = (option_get_int("Piece Activity") * 256 + 50) / 100;
    KingSafetyWeight    = (option_get_int("King Safety")    * 256 + 50) / 100;
-   PawnStructureWeight = (option_get_int("Pawn square table weight") * 256 + 50) / 100;
-} else {
-   PieceActivityWeight = (person.Piece_Activity * 256 + 50) / 100;
-   KingSafetyWeight    = (person.King_Safety    * 256 + 50) / 100;
-   PawnStructureWeight = (person.Pawn_square_table_weight * 256 + 50) / 100;
-}
+   PawnStructureWeight = (option_get_int("Pawn Structure") * 256 + 50) / 100;
+   alt_pawn_table =  option_get_bool("Alt Pawn SQT");
+   alt_knight_table =  option_get_bool("Alt Knight SQT");
+   alt_bishop_table =  option_get_bool("Alt Bishop SQT");
+
    // init
 
    for (piece = 0; piece < 12; piece++) {
@@ -131,22 +176,29 @@ if (!person.override_ucioptions) {
 
    piece = WhitePawn12;
 
-   // file
+   if (alt_pawn_table) {
+		for (sq = 0; sq < 64; sq++) {
+			P(piece,sq,Opening) += alt_pawn_opening[sq];
+			P(piece,sq,Endgame) += alt_pawn_endgame[sq];
+		}		
+   } else {
+		// file
 
-   for (sq = 0; sq < 64; sq++) {
-      P(piece,sq,Opening) += PawnFile[square_file(sq)] * PawnFileOpening;
+		for (sq = 0; sq < 64; sq++) {
+			P(piece,sq,Opening) += PawnFile[square_file(sq)] * PawnFileOpening;
+		}
+
+		// centre control
+
+		P(piece,D3,Opening) += 10;
+		P(piece,E3,Opening) += 10;
+
+		P(piece,D4,Opening) += 20;
+		P(piece,E4,Opening) += 20;
+
+		P(piece,D5,Opening) += 10;
+		P(piece,E5,Opening) += 10;
    }
-
-   // centre control
-
-   P(piece,D3,Opening) += 10;
-   P(piece,E3,Opening) += 10;
-
-   P(piece,D4,Opening) += 20;
-   P(piece,E4,Opening) += 20;
-
-   P(piece,D5,Opening) += 10;
-   P(piece,E5,Opening) += 10;
 
    // weight
 
@@ -159,27 +211,33 @@ if (!person.override_ucioptions) {
 
    piece = WhiteKnight12;
 
-   // centre
+   if (alt_knight_table) {
+		for (sq = 0; sq < 64; sq++) {
+			P(piece,sq,Opening) += alt_knight[sq];
+			P(piece,sq,Endgame) += alt_knight[sq];
+		}		
+   } else {
+		// centre
 
-   for (sq = 0; sq < 64; sq++) {
-      P(piece,sq,Opening) += KnightLine[square_file(sq)] * KnightCentreOpening;
-      P(piece,sq,Opening) += KnightLine[square_rank(sq)] * KnightCentreOpening;
-      P(piece,sq,Endgame) += KnightLine[square_file(sq)] * KnightCentreEndgame;
-      P(piece,sq,Endgame) += KnightLine[square_rank(sq)] * KnightCentreEndgame;
+		for (sq = 0; sq < 64; sq++) {
+			P(piece,sq,Opening) += KnightLine[square_file(sq)] * KnightCentreOpening;
+			P(piece,sq,Opening) += KnightLine[square_rank(sq)] * KnightCentreOpening;
+			P(piece,sq,Endgame) += KnightLine[square_file(sq)] * KnightCentreEndgame;
+			P(piece,sq,Endgame) += KnightLine[square_rank(sq)] * KnightCentreEndgame;
+		}
+
+		// rank
+
+		for (sq = 0; sq < 64; sq++) {
+			P(piece,sq,Opening) += KnightRank[square_rank(sq)] * KnightRankOpening;
+		}
+
+		// back rank
+
+		for (sq = A1; sq <= H1; sq++) { // HACK: only first rank
+			P(piece,sq,Opening) -= KnightBackRankOpening;
+		}
    }
-
-   // rank
-
-   for (sq = 0; sq < 64; sq++) {
-      P(piece,sq,Opening) += KnightRank[square_rank(sq)] * KnightRankOpening;
-   }
-
-   // back rank
-
-   for (sq = A1; sq <= H1; sq++) { // HACK: only first rank
-      P(piece,sq,Opening) -= KnightBackRankOpening;
-   }
-
    // "trapped"
 
    P(piece,A8,Opening) -= KnightTrapped;
@@ -196,36 +254,42 @@ if (!person.override_ucioptions) {
 
    piece = WhiteBishop12;
 
-   // centre
+   if (alt_bishop_table) {
+		for (sq = 0; sq < 64; sq++) {
+			P(piece,sq,Opening) += alt_bishop[sq];
+			P(piece,sq,Endgame) += alt_bishop[sq];
+		}				
+   } else {
+		// centre
 
-   for (sq = 0; sq < 64; sq++) {
-      P(piece,sq,Opening) += BishopLine[square_file(sq)] * BishopCentreOpening;
-      P(piece,sq,Opening) += BishopLine[square_rank(sq)] * BishopCentreOpening;
-      P(piece,sq,Endgame) += BishopLine[square_file(sq)] * BishopCentreEndgame;
-      P(piece,sq,Endgame) += BishopLine[square_rank(sq)] * BishopCentreEndgame;
+		for (sq = 0; sq < 64; sq++) {
+			P(piece,sq,Opening) += BishopLine[square_file(sq)] * BishopCentreOpening;
+			P(piece,sq,Opening) += BishopLine[square_rank(sq)] * BishopCentreOpening;
+			P(piece,sq,Endgame) += BishopLine[square_file(sq)] * BishopCentreEndgame;
+			P(piece,sq,Endgame) += BishopLine[square_rank(sq)] * BishopCentreEndgame;
+		}
+
+		// back rank
+
+		for (sq = A1; sq <= H1; sq++) { // HACK: only first rank
+			P(piece,sq,Opening) -= BishopBackRankOpening;
+		}
+
+		// main diagonals
+
+		for (i = 0; i < 8; i++) {
+			sq = square_make(i,i);
+			P(piece,sq,Opening) += BishopDiagonalOpening;
+			P(piece,square_opp(sq),Opening) += BishopDiagonalOpening;
+		}
+
+		// weight
+
+		for (sq = 0; sq < 64; sq++) {
+			P(piece,sq,Opening) = (P(piece,sq,Opening) * PieceActivityWeight) / 256;
+			P(piece,sq,Endgame) = (P(piece,sq,Endgame) * PieceActivityWeight) / 256;
+		}
    }
-
-   // back rank
-
-   for (sq = A1; sq <= H1; sq++) { // HACK: only first rank
-      P(piece,sq,Opening) -= BishopBackRankOpening;
-   }
-
-   // main diagonals
-
-   for (i = 0; i < 8; i++) {
-      sq = square_make(i,i);
-      P(piece,sq,Opening) += BishopDiagonalOpening;
-      P(piece,square_opp(sq),Opening) += BishopDiagonalOpening;
-   }
-
-   // weight
-
-   for (sq = 0; sq < 64; sq++) {
-      P(piece,sq,Opening) = (P(piece,sq,Opening) * PieceActivityWeight) / 256;
-      P(piece,sq,Endgame) = (P(piece,sq,Endgame) * PieceActivityWeight) / 256;
-   }
-
    // rooks
 
    piece = WhiteRook12;

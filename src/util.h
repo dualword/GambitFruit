@@ -48,18 +48,8 @@
 #  define ASSERT(a)
 #endif
 
-extern unsigned int mate_threats;
-extern unsigned int bm_threats;
-extern unsigned int history_cuts;
-extern unsigned int history_research;
-extern unsigned int futility_cuts;
-extern unsigned int razor_cuts;
-//extern unsigned int razor_researchs;
-extern unsigned int delta_cuts;
-extern unsigned int rebel_reductions;
-extern unsigned int rebel_researchs;
-
 // types
+
 typedef signed char sint8;
 typedef unsigned char uint8;
 
@@ -84,6 +74,39 @@ struct my_timer_t {
    double elapsed_cpu;
    bool running;
 };
+
+
+
+/*
+BitBases
+*/
+#define USE_EGBB _WIN32
+
+#if defined _WIN32
+
+#define _WKING     1
+#define _WQUEEN    2
+#define _WROOK     3
+#define _WBISHOP   4
+#define _WKNIGHT   5
+#define _WPAWN     6
+#define _BKING     7
+#define _BQUEEN    8
+#define _BROOK     9
+#define _BBISHOP  10
+#define _BKNIGHT  11
+#define _BPAWN    12
+#define _NOTFOUND 99999
+
+typedef int (*PPROBE_EGBB) (int player, int w_king, int b_king,
+			   int piece1, int square1,int piece2,int square2);
+extern PPROBE_EGBB probe_egbb;
+extern int egbb_is_loaded;
+
+#endif
+/*
+end BitBases
+*/
 
 // functions
 

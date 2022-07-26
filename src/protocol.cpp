@@ -22,13 +22,12 @@
 #include "protocol.h"
 #include "pst.h"
 #include "search.h"
-#include "search_full.h"
 #include "trans.h"
 #include "util.h"
 
 // constants
 
-#define VERSION "1.0 Beta 3"
+#define VERSION "1.0 Beta 4b"
 
 static const double NormalRatio = 1.0;
 static const double PonderRatio = 1.25;
@@ -91,6 +90,8 @@ static void init() {
       if (option_get_bool("OwnBook")) {
          book_open(option_get_string("BookFile"));
       }
+
+	  //SearchInput->multipv = option_get_int("MultiPV");
 
       trans_alloc(Trans);
 
@@ -179,17 +180,13 @@ static void loop_step() {
 
       ASSERT(!Searching);
       ASSERT(!Delay);
-      //printf("Good bye\n");
+
       exit(EXIT_SUCCESS);
 
    } else if (string_start_with(string,"setoption ")) {
 
       if (!Searching && !Delay) {
          parse_setoption(string);
-	 search_init ();
-	 material_init_uci();
-	 eval_init();
-	 pawn_init_uci();
       } else {
          ASSERT(false);
       }
@@ -213,7 +210,7 @@ static void loop_step() {
       ASSERT(!Delay);
 
       send("id name Gambit Fruit " VERSION);
-      send("id author Fabien Letouzey");
+      send("id author Ryan Benitez, Thomas Gaksch and Fabien Letouzey");
 
       option_list();
 
@@ -358,6 +355,14 @@ static void parse_go(char string[]) {
 
    // depth limit
 
+   // JAS
+   int option_depth = 0;
+   option_depth = option_get_int("Search Depth");
+   if (option_depth > 0) {
+   	  depth = option_depth;
+   }
+   // JAS end
+
    if (depth >= 0) {
       SearchInput->depth_is_limited = true;
       SearchInput->depth_limit = depth;
@@ -376,8 +381,16 @@ static void parse_go(char string[]) {
       inc = binc;
    }
 
-   if (movestogo <= 0 || movestogo > 30) movestogo = 30; // HACK
+   if (movestogo <= 0 || movestogo > 30) movestogo = 20; // HACK was 30
    if (inc < 0.0) inc = 0.0;
+
+   // JAS
+   int option_movetime = 0;
+   option_movetime = option_get_int("Search Time");
+   if (option_movetime > 0) {
+   	  movetime = option_movetime;
+   }
+   // JAS end
 
    if (movetime >= 0.0) {
 
@@ -556,8 +569,8 @@ static void send_best_move() {
 
    // best move
 
-   move = SearchBest->move;
-   pv = SearchBest->pv;
+   move = SearchBest[0].move;
+   pv = SearchBest[0].pv;
 
    move_to_string(move,move_string,256);
 
