@@ -54,7 +54,7 @@ struct material_info_t {
 // functions
 
 extern void material_init     ();
-
+extern void material_init_uci ();
 extern void material_alloc    ();
 extern void material_clear    ();
 

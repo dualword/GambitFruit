@@ -43,11 +43,72 @@ const int StackSize = 4096;
 #define KING_POS(board,colour) ((board)->piece[colour][0])
 
 // types
+/*
+#ifdef 64bit_ver
+
+typedef unsigned long Bitboard;
+
+#define Remove(a,b)  ((a) = (a^(UNIT<<b)))
+#define RemoveFirst(a)   ((a) = ((a) & ((a)-1)))
+#define UNIT   ((Bitboard)1)
+#define EMPTY  ((Bitboard)0)
+
+extern int RotateR90[64],RotateL90[64];
+extern int RotateR45[64],RotateL45[64],InvRotateR45[64],InvRotateL45[64];
+extern Bitboard Mask[64],FPMask1,FPMask2,RankMask[8];
 
 struct board_t {
 
    int piece_material[ColourNb]; // Thomas
-   	
+   
+   int bm_move[ColourNb];
+   int bm_value[ColourNb];
+
+   Bitboard All;  
+   Bitboard R90,R45,L45;
+   Bitboard Pieces[ColourNb];
+   Bitboard Pawns[ColourNb];
+   Bitboard Rooks[ColourNb];
+   Bitboard Knights[ColourNb];
+   Bitboard Bishops[ColourNb];
+   Bitboard Queens[ColourNb];
+
+   uint8 piece[ColourNb][17]; // was 32
+   int piece_size[ColourNb];
+
+   uint8 pawn[ColourNb][9]; // was 16
+   int pawn_size[ColourNb];
+
+   int piece_nb;
+   int number[12]; // was 16
+
+   int pawn_file[ColourNb][FileNb];
+
+   int turn;
+   int flags;
+   int ep_square;
+   int ply_nb;
+   int sp; // TODO: MOVE ME?
+
+   int cap_sq;
+
+   int opening;
+   int endgame;
+
+   uint64 key;
+   uint64 pawn_key;
+   uint64 material_key;
+
+   uint64 stack[StackSize];
+};
+#else */
+struct board_t {
+
+   int piece_material[ColourNb]; // Thomas
+   
+   int bm_move[ColourNb];
+   int bm_value[ColourNb];
+
    int square[SquareNb];
    int pos[SquareNb];
 
@@ -79,6 +140,7 @@ struct board_t {
 
    uint64 stack[StackSize];
 };
+//#endif
 
 // functions
 

@@ -48,8 +48,18 @@
 #  define ASSERT(a)
 #endif
 
-// types
+extern unsigned int mate_threats;
+extern unsigned int bm_threats;
+extern unsigned int history_cuts;
+extern unsigned int history_research;
+extern unsigned int futility_cuts;
+extern unsigned int razor_cuts;
+//extern unsigned int razor_researchs;
+extern unsigned int delta_cuts;
+extern unsigned int rebel_reductions;
+extern unsigned int rebel_researchs;
 
+// types
 typedef signed char sint8;
 typedef unsigned char uint8;
 

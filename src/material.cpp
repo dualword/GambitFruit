@@ -14,10 +14,11 @@
 #include "protocol.h"
 #include "square.h"
 #include "util.h"
+#include "person.h"
 
 // constants
 
-static const bool UseTable = true;
+//static const bool UseTable = true;
 static const uint32 TableSize = 256; // 4kB
 
 static const int PawnPhase   = 0;
@@ -33,21 +34,21 @@ static const int TotalPhase = PawnPhase * 16 + KnightPhase * 4 + BishopPhase * 4
 static /* const */ int OpeningExchangePenalty = 30; /* Thomas penalty exchange piece pawn */
 static /* const */ int EndgameExchangePenalty = 30; // I do not like this but it stays until I have time to tune.
 
-static /* const */ int MaterialWeight = 256; // 100%
+//static /* const */ int MaterialWeight = 256; // 100%
 
-static const int PawnOpening   = 90; // was 100
-static const int PawnEndgame   = 100; // was 100
-static const int KnightOpening = 325; // 325 
-static const int KnightEndgame = 325; // 325 
-static const int BishopOpening = 325; // 325
-static const int BishopEndgame = 325; // 325
-static const int RookOpening   = 500;
-static const int RookEndgame   = 500;
-static const int QueenOpening  = 975;
-static const int QueenEndgame  = 975;
+static /*const*/ int PawnOpening   = 85; // was 90
+static /*const*/ int PawnEndgame   = 95; // was 100
+static /*const*/ int KnightOpening = 320; //315 
+static /*const*/ int KnightEndgame = 320; //315
+static /*const*/ int BishopOpening = 325; 
+static /*const*/ int BishopEndgame = 325;
+static /*const*/ int RookOpening   = 500;
+static /*const*/ int RookEndgame   = 500;
+static /*const*/ int QueenOpening  = 975; 
+static /*const*/ int QueenEndgame  = 975; 
 
-static const int BishopPairOpening = 50;
-static const int BishopPairEndgame = 50;
+static /*const*/ int BishopPairOpening = 50;
+static /*const*/ int BishopPairEndgame = 50;
 
 static /*const*/ int Queen_Knight_combo = 20; // with no rooks
 static /*const*/ int Rook_Bishop_combo = 20;  // with no queens
@@ -80,15 +81,60 @@ static void material_comp_info (material_info_t * info, const board_t * board);
 
 // functions
 
+void material_init_uci() {
+   // UCI options
+
+if (!person.override_ucioptions) {
+   OpeningExchangePenalty = option_get_int("Fruit Exchange Bonus");
+   EndgameExchangePenalty = OpeningExchangePenalty; 
+
+   BishopPairOpening = option_get_int("Bishop Pair Opening");
+   BishopPairEndgame = option_get_int("Bishop Pair Endgame");
+
+   Queen_Knight_combo = option_get_int("Queen Knight combo");
+   Rook_Bishop_combo = option_get_int("Rook Bishop combo");
+
+   PawnOpening = option_get_int("Opening Pawn Value");
+   KnightOpening = option_get_int("Opening Knight Value");
+   BishopOpening = option_get_int("Opening Bishop Value");
+   RookOpening = option_get_int("Opening Rook Value");
+   QueenOpening = option_get_int("Opening Queen Value");
+
+   PawnEndgame = option_get_int("Endgame Pawn Value");
+   KnightEndgame = option_get_int("Endgame Knight Value");
+   BishopEndgame = option_get_int("Endgame Bishop Value");
+   RookEndgame = option_get_int("Endgame Rook Value");
+   QueenEndgame = option_get_int("Endgame Queen Value");
+} else {
+   OpeningExchangePenalty = person.Fruit_Exchange_Bonus;
+   EndgameExchangePenalty = OpeningExchangePenalty; 
+
+   BishopPairOpening = person.Bishop_Pair_Opening;
+   BishopPairEndgame = person.Bishop_Pair_Endgame;
+
+   Queen_Knight_combo = person.Queen_Knight_combo;
+   Rook_Bishop_combo = person.Rook_Bishop_combo;
+
+   PawnOpening = person.Opening_Pawn_Value;
+   KnightOpening = person.Opening_Knight_Value;
+   BishopOpening = person.Opening_Bishop_Value;
+   RookOpening = person.Opening_Rook_Value;
+   QueenOpening = person.Opening_Queen_Value;
+
+   PawnEndgame = person.Endgame_Pawn_Value;
+   KnightEndgame = person.Endgame_Knight_Value;
+   BishopEndgame = person.Endgame_Bishop_Value;
+   RookEndgame = person.Endgame_Rook_Value;
+   QueenEndgame = person.Endgame_Queen_Value;
+}
+
+}
+
 // material_init()
 
 void material_init() {
-
    // UCI options
-
-   MaterialWeight = (option_get_int("Material") * 256 + 50) / 100;
-   OpeningExchangePenalty = option_get_int("Fruit Exchange Bonus");
-   EndgameExchangePenalty = OpeningExchangePenalty; 
+   material_init_uci();
 
    // material table
 
@@ -284,7 +330,7 @@ static void material_comp_info(material_info_t * info, const board_t * board) {
    // draw node (exact-draw recogniser)
 
    flags = 0; // TODO: MOVE ME
-   for (colour = 0; colour < ColourNb; colour++) cflags[colour] = 0;
+   cflags[0] = cflags[1] = 0;
 
    if (wq+wr+wp == 0 && bq+br+bp == 0) { // no major piece or pawn
       if (wm + bm <= 1 // at most one minor => KK, KBK or KNK
@@ -308,7 +354,7 @@ static void material_comp_info(material_info_t * info, const board_t * board) {
 
    // multipliers
 
-   for (colour = 0; colour < ColourNb; colour++) mul[colour] = 16; // 1
+   mul[0] = mul[1] = 16; // 1
 
    // white multiplier
 
@@ -762,8 +808,8 @@ static void material_comp_info(material_info_t * info, const board_t * board) {
    info->mul[0] = mul[0];
    info->mul[1] = mul[1];
    info->phase = phase;
-   info->opening = (opening * MaterialWeight) / 256;
-   info->endgame = (endgame * MaterialWeight) / 256;
+   info->opening = opening;
+   info->endgame = endgame;
 }
 
 // end of material.cpp

@@ -18,6 +18,8 @@
 #include "util.h"
 #include "value.h"
 #include "vector.h"
+#include "bitbase.h"
+#include "person.h"
 
 // macros
 
@@ -109,8 +111,9 @@ static const int RookOpenFileOpening = 20;
 static const int RookOpenFileEndgame = 20;
 static const int RookSemiKingFileOpening = 10;
 static const int RookKingFileOpening = 20;
-static const int RookOnBadPawnFileOpening = 8;
-static const int RookOnBadPawnFileEndgame = 8;
+
+static /*const*/ int RookOnBadPawnFileOpening = 8;
+static /*const*/ int RookOnBadPawnFileEndgame = 8;
 
 static const bool UseKingAttack = true;
 static const int KingAttackOpening = 20;
@@ -157,6 +160,8 @@ static const int KingAttackWeight[16] = {
    0, 0, 128, 192, 224, 240, 248, 252, 254, 255, 256, 256 ,256, 256, 256, 256,
 };
 
+//enum {RANK1,RANK2,RANK3,RANK4,RANK5,RANK6,RANK7,RANK8};
+
 // variables
 
 static int MobUnit[ColourNb][PieceNb];
@@ -198,6 +203,9 @@ static int  storm_file         (const board_t * board, int file, int colour);
 
 static bool bishop_can_attack  (const board_t * board, int to, int colour);
 
+//static int simple_rank(int rank);
+//static int simple_file(int file);
+
 // functions
 
 // eval_init()
@@ -208,10 +216,13 @@ void eval_init() {
    int piece;
 
    // UCI options
-
+if (!person.override_ucioptions) {
    PieceActivityWeight = (option_get_int("Piece Activity") * 256 + 50) / 100;
    KingSafetyWeight    = (option_get_int("King Safety")    * 256 + 50) / 100;
    PassedPawnWeight    = (option_get_int("Passed Pawns")   * 256 + 50) / 100;
+
+   RookOnBadPawnFileOpening = option_get_int("Rook on bad pawn file opening bonus");
+   RookOnBadPawnFileEndgame = option_get_int("Rook on bad pawn file endgame bonus");
 
    use_tropism = option_get_bool("Use King Tropism"); /* Ryan */
    knight_tropism = option_get_int("knight tropism");
@@ -223,7 +234,26 @@ void eval_init() {
    lazy_eval_cutoff = option_get_int("Fruit Lazy Eval Margin");
    KingSafetyMargin = option_get_int("Fruit King Safety Margin"); 
    KingSafety = option_get_bool("Fruit King Safety");
+} else {
 
+   PieceActivityWeight = (person.Piece_Activity * 256 + 50) / 100;
+   KingSafetyWeight    = (person.King_Safety    * 256 + 50) / 100;
+   PassedPawnWeight    = (person.Passed_Pawns   * 256 + 50) / 100;
+
+   RookOnBadPawnFileOpening = person.Rook_on_bad_pawn_file_opening_bonus;
+   RookOnBadPawnFileEndgame = person.Rook_on_bad_pawn_file_endgame_bonus;
+
+   use_tropism = person.Use_King_Tropism; /* Ryan */
+   knight_tropism = person.knight_tropism;
+   bishop_tropism = person.bishop_tropism;
+   rook_tropism = person.rook_tropism;
+   queen_tropism = person.queen_tropism;
+
+   LazyEval = person.Fruit_Lazy_Eval; /* Thomas */
+   lazy_eval_cutoff = person.Fruit_Lazy_Eval_Margin;
+   KingSafetyMargin = person.Fruit_King_Safety_Margin; 
+   KingSafety = person.Fruit_King_Safety;
+}
    // mobility table
 
    for (colour = 0; colour < ColourNb; colour++) {
@@ -369,10 +399,37 @@ int eval(const board_t * board, int alpha, int beta) {
    eval_passer(board,pawn_info,&opening,&endgame);
    eval_pattern(board,&opening,&endgame);
 
+
    // phase mix
 
    phase = mat_info->phase;
    eval = ((opening * (256 - phase)) + (endgame * phase)) / 256;
+
+/*   
+   // Bitbases todo: move this to material.cpp?
+   if (mat_info->recog == MAT_KPK) {
+	int score,index,p_index,kk_index,psq,side,temp;
+	int wksq = KING_POS(board,board->turn);
+	int bksq = KING_POS(board,!board->turn);
+	psq = board->pawn[White][0];
+	side = board->turn;
+	
+	if(SQUARE_FILE(psq) > FileD) {
+		psq = SQUARE_FILE_MIRROR(psq);
+        	wksq = SQUARE_FILE_MIRROR(wksq);
+		bksq = SQUARE_FILE_MIRROR(bksq);
+	}
+
+        p_index = simple_file(SQUARE_FILE(psq)) + ((simple_rank(PAWN_RANK(psq,0)) - RANK2) * 4);
+	kk_index = KK_index[SQUARE_TO_64(wksq) * 64 + SQUARE_TO_64(bksq)];
+	index = ((side != White) * 3612 * 24) + (kk_index * 24) + p_index;
+
+	score = (bitbases[0].table[(index >> 3)] & (1 << (index & 7)));
+	if(score) {
+		eval = 800 + 100 - (7 - simple_rank(PAWN_RANK(psq,0)));
+	}
+   }
+*/
 
    // drawish bishop endgames
 
@@ -397,6 +454,7 @@ int eval(const board_t * board, int alpha, int beta) {
    } else if (eval < ValueDraw) {
       eval = (eval * mul[Black]) / 16;
    }
+
 
    // value range
 
@@ -2232,5 +2290,51 @@ static bool bishop_can_attack(const board_t * board, int to, int colour) {
    return false;
 }
 
+/*
+static int simple_rank(int rank) {
+	switch (rank) {
+		case Rank1:
+			return 0;
+		case Rank2:
+			return 1;
+		case Rank3:
+			return 2;
+		case Rank4:
+			return 3;
+		case Rank5:
+			return 4;
+		case Rank6:
+			return 5;
+		case Rank7:
+			return 6;
+		case Rank8:
+			return 7;
+	}
+	return 0;
+}
+
+
+static int simple_file(int file) {
+	switch (file) {
+		case FileA:
+			return 0;
+		case FileB:
+			return 1;
+		case FileC:
+			return 2;
+		case FileD:
+			return 3;
+		case FileE:
+			return 4;
+		case FileF:
+			return 5;
+		case FileG:
+			return 6;
+		case FileH:
+			return 7;
+	}
+	return 0;
+}
+*/
 // end of eval.cpp
 

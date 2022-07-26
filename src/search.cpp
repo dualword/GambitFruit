@@ -50,6 +50,17 @@ static const bool UseBad = true;
 static const int BadThreshold = 50; // 50
 static const bool UseExtension = true;
 
+unsigned int mate_threats;
+unsigned int bm_threats;
+unsigned int history_cuts;
+unsigned int history_research;
+unsigned int futility_cuts;
+unsigned int razor_cuts;
+//unsigned int razor_researchs;
+unsigned int delta_cuts;
+unsigned int rebel_reductions;
+unsigned int rebel_researchs;
+
 // variables
 
 bool trans_endgame;
@@ -128,6 +139,18 @@ void search_clear() {
    SearchCurrent->time = 0.0;
    SearchCurrent->speed = 0.0;
    SearchCurrent->cpu = 0.0;
+
+   //stats
+   mate_threats = 0;
+   bm_threats = 0;
+   history_cuts = 0;
+   history_research = 0;
+   futility_cuts = 0;
+   razor_cuts = 0;
+//   razor_researchs = 0;
+   delta_cuts = 0;
+   rebel_reductions = 0;
+   rebel_researchs = 0;
 }
 
 // search()
@@ -195,6 +218,7 @@ void search() {
    trans_inc_date(Trans);
 
    sort_init();
+   search_init ();
    search_full_init(SearchRoot->list,SearchCurrent->board);
 
    // analyze game for evaluation
@@ -320,11 +344,11 @@ void search_update_best() {
 
          if (false) {
          } else if (flags == SearchExact) {
-            send("info depth %d seldepth %d score cp %d time %.0f nodes " S64_FORMAT " pv %s",depth,max_depth,value,time*1000.0,node_nb,pv_string);
+            send("info depth %d seldepth %d score cp %d time %.0f nodes " S64_FORMAT " pv %s {MT=%d-HC=%d-HR=%d-FC=%d-LRC=%d-DC=%d-RR=%d-RRR=%d-BM=%d}",depth,max_depth,value,time*1000.0,node_nb,pv_string, mate_threats, history_cuts, history_research, futility_cuts, razor_cuts, delta_cuts, rebel_reductions, rebel_researchs, bm_threats);
          } else if (flags == SearchLower) {
-            send("info depth %d seldepth %d score cp %d lowerbound time %.0f nodes " S64_FORMAT " pv %s",depth,max_depth,value,time*1000.0,node_nb,pv_string);
+            send("info depth %d seldepth %d score cp %d lowerbound time %.0f nodes " S64_FORMAT " pv %s {MT=%d-HC=%d-HR=%d-FC=%d-LRC=%d-DC=%d-RR=%d-RRR=%d-BM=%d}",depth,max_depth,value,time*1000.0,node_nb,pv_string, mate_threats, history_cuts, history_research, futility_cuts, razor_cuts, delta_cuts, rebel_reductions, rebel_researchs, bm_threats);
          } else if (flags == SearchUpper) {
-            send("info depth %d seldepth %d score cp %d upperbound time %.0f nodes " S64_FORMAT " pv %s",depth,max_depth,value,time*1000.0,node_nb,pv_string);
+            send("info depth %d seldepth %d score cp %d upperbound time %.0f nodes " S64_FORMAT " pv %s {MT=%d-HC=%d-HR=%d-FC=%d-LRC=%d-DC=%d-RR=%d-RRR=%d-BM=%d}",depth,max_depth,value,time*1000.0,node_nb,pv_string, mate_threats, history_cuts, history_research, futility_cuts, razor_cuts, delta_cuts, rebel_reductions, rebel_researchs, bm_threats);
          }
 
       } else {
@@ -333,11 +357,11 @@ void search_update_best() {
 
          if (false) {
          } else if (flags == SearchExact) {
-            send("info depth %d seldepth %d score mate %d time %.0f nodes " S64_FORMAT " pv %s",depth,max_depth,mate,time*1000.0,node_nb,pv_string);
+            send("info depth %d seldepth %d score mate %d time %.0f nodes " S64_FORMAT " pv %s {MT=%d-HC=%d-HR=%d-FC=%d-LRC=%d-DC=%d-RR=%d-RRR=%d-BM=%d}",depth,max_depth,mate,time*1000.0,node_nb,pv_string, mate_threats, history_cuts, history_research, futility_cuts, razor_cuts, delta_cuts, rebel_reductions, rebel_researchs, bm_threats);
          } else if (flags == SearchLower) {
-            send("info depth %d seldepth %d score mate %d lowerbound time %.0f nodes " S64_FORMAT " pv %s",depth,max_depth,mate,time*1000.0,node_nb,pv_string);
+            send("info depth %d seldepth %d score mate %d lowerbound time %.0f nodes " S64_FORMAT " pv %s {MT=%d-HC=%d-HR=%d-FC=%d-LRC=%d-DC=%d-RR=%d-RRR=%d-BM=%d}",depth,max_depth,mate,time*1000.0,node_nb,pv_string, mate_threats, history_cuts, history_research, futility_cuts, razor_cuts, delta_cuts, rebel_reductions, rebel_researchs, bm_threats);
          } else if (flags == SearchUpper) {
-            send("info depth %d seldepth %d score mate %d upperbound time %.0f nodes " S64_FORMAT " pv %s",depth,max_depth,mate,time*1000.0,node_nb,pv_string);
+            send("info depth %d seldepth %d score mate %d upperbound time %.0f nodes " S64_FORMAT " pv %s {MT=%d-HC=%d-HR=%d-FC=%d-LRC=%d-DC=%d-RR=%d-RRR=%d-BM=%d}",depth,max_depth,mate,time*1000.0,node_nb,pv_string, mate_threats, history_cuts, history_research, futility_cuts, razor_cuts, delta_cuts, rebel_reductions, rebel_researchs, bm_threats);
          }
       }
    }

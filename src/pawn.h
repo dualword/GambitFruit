@@ -37,12 +37,13 @@ struct pawn_info_t {
    uint32 lock;
    sint16 opening;
    sint16 endgame;
-   sint16 wsp[ColourNb]; // Ryan
    uint8 flags[ColourNb]; 
    uint8 passed_bits[ColourNb];
    uint8 single_file[ColourNb];
    uint8 badpawns[ColourNb]; // Ryan
-   //uint16 pad;
+   uint8 wsp[ColourNb]; // Ryan
+//   uint8 pawn_rams;
+//   uint16 pad;
 };
 
 // variables
@@ -62,6 +63,7 @@ extern int BitRev[0x100];
 
 extern void pawn_init_bit ();
 extern void pawn_init     ();
+extern void pawn_init_uci ();
 
 extern void pawn_alloc    ();
 extern void pawn_clear    ();

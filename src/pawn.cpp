@@ -17,7 +17,7 @@
 
 // constants
 
-static const bool UseTable = true;
+//static const bool UseTable = true;
 static const uint32 TableSize = 16384; // 256kB
 
 // types
@@ -37,26 +37,28 @@ struct pawn_t {
 
 // constants and variables
 
-static /* const */ int PawnStructureWeight = 256; // 100%
+//static /* const */ int PawnStructureWeight = 256; // 100%
 
+static int PawnDuoOpening = 6;
+static int PawnDuoEndgame = 6;
 
-static const int DoubledOpening = 10;
-static const int DoubledEndgame = 20;
+static /*const*/ int DoubledOpening = 10;
+static /*const*/ int DoubledEndgame = 20;
 //static const int DoubledOpening[8] {0, 10, 22, 36, 52, 70, 90, 112 };
 //static const int DoubledEndgame[8] {0, 18, 40, 68, 100, 136, 176, 220 };
 
-static const int IsolatedOpening = 12;
-static const int IsolatedOpeningOpen = 16; //20
-static const int IsolatedEndgame = 20;
+static /*const*/ int IsolatedOpening = 12;
+static /*const*/ int IsolatedOpeningOpen = 16; //20
+static /*const*/ int IsolatedEndgame = 20;
 
-static const int BackwardOpening = 8;
-static const int BackwardOpeningOpen = 12; //16
-static const int BackwardEndgame = 12;
+static /*const*/ int BackwardOpening = 8;
+static /*const*/ int BackwardOpeningOpen = 12; //16
+static /*const*/ int BackwardEndgame = 12;
 
-static const int CandidateOpeningMin = 10; // 5
-static const int CandidateOpeningMax = 60; // 55
-static const int CandidateEndgameMin = 20; // 10
-static const int CandidateEndgameMax = 120; // 110
+static /*const*/ int CandidateOpeningMin = 5; // 5
+static /*const*/ int CandidateOpeningMax = 55; // 55
+static /*const*/ int CandidateEndgameMin = 10; // 10
+static /*const*/ int CandidateEndgameMax = 110; // 110
 
 // this was moved to eval.cpp
 
@@ -156,6 +158,33 @@ void pawn_init_bit() {
    }
 }
 
+// pawn_inti_uci
+
+void pawn_init_uci() {
+   // UCI options
+
+   //PawnStructureWeight = (option_get_int("Pawn Structure") * 256 + 50) / 100;
+   PawnDuoOpening = option_get_int("Pawn Duo Opening");
+   PawnDuoEndgame = option_get_int("Pawn Duo Opening");
+
+   DoubledOpening = option_get_int("Pawn Doubled Opening");
+   DoubledEndgame = option_get_int("Pawn Doubled Endgame");
+
+   IsolatedOpening = option_get_int("Pawn Isolated Opening");
+   IsolatedOpeningOpen = option_get_int("Pawn Isolated Opening Open");
+   IsolatedEndgame = option_get_int("Pawn Isolated Endgame");
+
+   BackwardOpening = option_get_int("Pawn Backward Opening");
+   BackwardOpeningOpen = option_get_int("Pawn Backward Opening Open");
+   BackwardEndgame = option_get_int("Pawn Backward Endgame");
+
+   CandidateOpeningMin = option_get_int("Pawn Candidate Opening Min");
+   CandidateOpeningMax = option_get_int("Pawn Candidate Opening Max");
+   CandidateEndgameMin = option_get_int("Pawn Candidate Endgame Min");
+   CandidateEndgameMax = option_get_int("Pawn Candidate Endgame Max");
+
+}
+
 // pawn_init()
 
 void pawn_init() {
@@ -164,7 +193,7 @@ void pawn_init() {
 
    // UCI options
 
-   PawnStructureWeight = (option_get_int("Pawn Structure") * 256 + 50) / 100;
+   pawn_init_uci();
 
    // bonus
 
@@ -367,6 +396,13 @@ static void pawn_comp_info(pawn_info_t * info, const board_t * board) {
          t1 = board->pawn_file[me][file-1] | board->pawn_file[me][file+1];
          t2 = board->pawn_file[me][file] | BitRev[board->pawn_file[opp][file]];
 
+	 // pawn duo
+	 if (BIT_COUNT(BitRev[board->pawn_file[me][file+1]]&BitEQ[rank])) {
+		opening[me] += PawnDuoOpening;
+		endgame[me] += PawnDuoEndgame;
+	 }
+
+
          // doubled
 
          if ((board->pawn_file[me][file] & BitLT[rank]) != 0) {
@@ -559,8 +595,8 @@ static void pawn_comp_info(pawn_info_t * info, const board_t * board) {
 
    // store info
 
-   info->opening = ((opening[White] - opening[Black]) * PawnStructureWeight) / 256;
-   info->endgame = ((endgame[White] - endgame[Black]) * PawnStructureWeight) / 256;
+   info->opening = /*(*/(opening[White] - opening[Black])/* * PawnStructureWeight) / 256*/;
+   info->endgame = /*(*/(endgame[White] - endgame[Black])/* * PawnStructureWeight) / 256*/;
 
    //for (colour = 0; colour < ColourNb; colour++) {
 

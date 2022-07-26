@@ -7,6 +7,7 @@
 #include "piece.h"
 #include "pst.h"
 #include "util.h"
+#include "person.h"
 
 // macros
 
@@ -107,11 +108,15 @@ void pst_init() {
    int piece, sq, stage;
 
    // UCI options
-
+if (!person.override_ucioptions) {
    PieceActivityWeight = (option_get_int("Piece Activity") * 256 + 50) / 100;
    KingSafetyWeight    = (option_get_int("King Safety")    * 256 + 50) / 100;
-   PawnStructureWeight = (option_get_int("Pawn Structure") * 256 + 50) / 100;
-
+   PawnStructureWeight = (option_get_int("Pawn square table weight") * 256 + 50) / 100;
+} else {
+   PieceActivityWeight = (person.Piece_Activity * 256 + 50) / 100;
+   KingSafetyWeight    = (person.King_Safety    * 256 + 50) / 100;
+   PawnStructureWeight = (person.Pawn_square_table_weight * 256 + 50) / 100;
+}
    // init
 
    for (piece = 0; piece < 12; piece++) {

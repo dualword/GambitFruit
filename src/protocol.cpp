@@ -22,12 +22,13 @@
 #include "protocol.h"
 #include "pst.h"
 #include "search.h"
+#include "search_full.h"
 #include "trans.h"
 #include "util.h"
 
 // constants
 
-#define VERSION "1.0 Beta 1.1a"
+#define VERSION "1.0 Beta 3"
 
 static const double NormalRatio = 1.0;
 static const double PonderRatio = 1.25;
@@ -178,13 +179,17 @@ static void loop_step() {
 
       ASSERT(!Searching);
       ASSERT(!Delay);
-
+      //printf("Good bye\n");
       exit(EXIT_SUCCESS);
 
    } else if (string_start_with(string,"setoption ")) {
 
       if (!Searching && !Delay) {
          parse_setoption(string);
+	 search_init ();
+	 material_init_uci();
+	 eval_init();
+	 pawn_init_uci();
       } else {
          ASSERT(false);
       }

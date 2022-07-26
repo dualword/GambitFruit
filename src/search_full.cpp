@@ -12,6 +12,7 @@
 #include "move_check.h"
 #include "move_do.h"
 #include "option.h"
+#include "pawn.h"
 #include "piece.h"
 #include "pst.h"
 #include "pv.h"
@@ -23,11 +24,30 @@
 #include "trans.h"
 #include "util.h"
 #include "value.h"
+#include "person.h"
 
 #define ABS(x) ((x)<0?-(x):(x))
 
+int ValueDraw;
 
 // constants and variables
+static const int Fractional = 16;
+
+static int ext_cap = 16;
+static int check_ext = 16;
+static int recap_ext = 16;
+static int pawn_ext = 16;
+static int single_reply_ext = 16;
+static int threat_ext = 16;
+//static int ppush_ext = 8;
+
+static bool exclude_bme_from_cap = false;
+static bool use_bme = false;
+static int bm_ext = 12;
+
+// Fractional Extensions 
+#define REAL_DEPTH(depth) (depth/Fractional)
+#define FRACT_DEPTH(depth) (depth*Fractional)
 
 // main search
 
@@ -35,8 +55,8 @@ static const bool UseDistancePruning = true;
 
 // transposition table
 
-static const bool UseTrans = true;
-static const int TransDepth = 1;
+//static const bool UseTrans = true;
+static const int TransDepth = Fractional;
 
 static const bool UseMateValues = true; // use mate values from shallower searches?
 
@@ -44,38 +64,41 @@ static const bool UseMateValues = true; // use mate values from shallower search
 
 static /* const */ bool UseNull = true;
 static /* const */ bool UseNullEval = true; // true
-static const int NullDepth = 2;
-static /* const */ int NullReduction = 3;
+static const int NullDepth = 2*Fractional;
+static /* const */ int NullReduction = 3*Fractional;
 
 static /* const */ bool UseVer = true;
 static /* const */ bool UseVerEndgame = true; // true
-static /* const */ int VerReduction = 5; // was 3
+static /* const */ int VerReduction = 5*Fractional; // was 3
 
 // move ordering
 
 static const bool UseIID = true;
-static const int IIDDepth = 3;
-static const int IIDReduction = 2;
+static const int IIDDepth = 3*Fractional;
+static const int IIDReduction = 2*Fractional;
 
 // extensions
 
 static const bool ExtendSingleReply = true; // true
 
+// rebel reduction
+static bool use_rebel_reduction = true; // I hope I did this right...
+
 // history pruning
 
 static /* const */ bool UseHistory = true;
-static const int HistoryDepth = 3;
+static const int HistoryDepth = 3*Fractional;
 static const int HistoryMoveNb = 3;
 static /* const */ int HistoryValue = 9830; // 60%
-static const int HistoryBound = 2458; // * 16384 + 50) / 100 10%=1638 15%=2458 20%=3277
-static const bool UseExtendedHistory = false;
+//static const int HistoryBound = 2458; // * 16384 + 50) / 100 10%=1638 15%=2458 20%=3277
+//static const bool UseExtendedHistory = false;
 static const bool HistoryReSearch = true;
 
 // futility pruning
 
 static /* const */ bool UseFutility = false; // false
-static /* const */ int FutilityMargin1 = 250;
-static /* const */ int FutilityMargin2 = 550;
+static /* const */ int FutilityMargin1 = 300;
+static /* const */ int FutilityMargin2 = 500;
 static /* const */ int FutilityMargin3 = 950;
 
 // quiescence search
@@ -111,7 +134,7 @@ static int  full_no_null         (board_t * board, int alpha, int beta, int dept
 
 static int  full_quiescence      (board_t * board, int alpha, int beta, int depth, int height, mv_t pv[]);
 
-static int  full_new_depth       (int depth, int move, board_t * board, bool single_reply, bool in_pv, bool threat);
+static int  full_new_depth       (int depth, int move, board_t * board, bool single_reply, bool in_pv, bool threat, bool same_threat);
 
 static bool do_null              (const board_t * board);
 static bool do_ver               (const board_t * board);
@@ -123,17 +146,15 @@ static bool capture_is_dangerous (int move, const board_t * board);
 
 static bool simple_stalemate     (const board_t * board);
 
+static bool is_passed(const board_t * board, int to);
+
 // functions
 
-// search_full_init()
+// search_init()
 
-void search_full_init(list_t * list, board_t * board) {
-
+void search_init() {
    const char * string;
-   int trans_move, trans_min_depth, trans_max_depth, trans_min_value, trans_max_value;
 
-   ASSERT(list_is_ok(list));
-   ASSERT(board_is_ok(board));
 
    // null-move options
 
@@ -155,7 +176,7 @@ void search_full_init(list_t * list, board_t * board) {
       UseNullEval = true;
    }
 
-   NullReduction = option_get_int("NullMove Reduction");
+   NullReduction = option_get_int("NullMove Reduction")*Fractional;
 
    string = option_get_string("Verification Search");
 
@@ -175,15 +196,32 @@ void search_full_init(list_t * list, board_t * board) {
       UseVerEndgame = true;
    }
 
-   VerReduction = option_get_int("Verification Reduction");
+   VerReduction = option_get_int("Verification Reduction")*Fractional;
+
+if (!person.override_ucioptions) {
+   // draw value
+   ValueDraw = option_get_int("Contempt Factor");   
+
+   // extentions
+   exclude_bme_from_cap = option_get_bool("Exclude Same threat from cap");
+   use_bme = option_get_bool("Use same threat extensions");
+   bm_ext = option_get_int("Same threat extensions level");
+
+   ext_cap = option_get_int("Extension cap");
+   check_ext = option_get_int("Check extension level");
+   recap_ext = option_get_int("Recap extension level");
+   pawn_ext = option_get_int("Pawn to 7th extension level");
+   threat_ext = option_get_int("Threat extension level");
+   single_reply_ext = option_get_int("Single reply extension level");
+
 
    // history-pruning options
 
    UseHistory = option_get_bool("History Pruning");
    HistoryValue = (option_get_int("History Threshold") * 16384 + 50) / 100;
 
-   //UseExtendedHistory = option_get_bool("Fruit Extended History Pruning");
-   //HistoryBound = (option_get_int("Fruit History Threshold") * 16384 + 50) / 100;
+   // rebel reduction options
+   use_rebel_reduction = option_get_bool("Rebel Reduction");
 
    // futility-pruning options
 
@@ -200,8 +238,63 @@ void search_full_init(list_t * list, board_t * board) {
    // quiescence-search options
 
    CheckNb = option_get_int("Quiescence Check Plies");
+} else {
+
+   // draw value
+   ValueDraw = person.Contempt_Factor;   
+
+   // extentions
+   exclude_bme_from_cap = person.Exclude_Same_threat_from_cap;
+   use_bme = person.Use_same_threat_extensions;
+   bm_ext = person.Same_threat_extension_level;
+
+   ext_cap = person.Extension_cap;
+   check_ext = person.Check_extension_level;
+   recap_ext = person.Recap_extension_level;
+   pawn_ext = person.Pawn_to_7th_extension_level;
+   threat_ext = person.Threat_extension_level;
+   single_reply_ext = person.Single_reply_extension_level;
+
+
+   // history-pruning options
+
+   UseHistory = person.History_Pruning;
+   HistoryValue = (person.History_Threshold * 16384 + 50) / 100;
+
+   // rebel reduction options
+   use_rebel_reduction = person.Rebel_Reduction;
+
+   // futility-pruning options
+
+   UseFutility = person.Futility_Pruning;
+   FutilityMargin3 = person.Futility_Margin_Depth3;
+   FutilityMargin2 = person.Futility_Margin_Depth2;
+   FutilityMargin1 = person.Futility_Margin_Depth1;
+
+   // delta-pruning options
+
+   UseDelta = person.Delta_Pruning;
+   DeltaMargin = person.Delta_Margin;
+
+   // quiescence-search options
+
+   CheckNb = person.Quiescence_Check_Plies;
+}
+
    CheckDepth = 1 - CheckNb;
 
+}
+
+// search_full_init()
+
+void search_full_init(list_t * list, board_t * board) {
+
+   //const char * string;
+   int trans_move, trans_min_depth, trans_max_depth, trans_min_value, trans_max_value;
+
+   ASSERT(list_is_ok(list));
+   ASSERT(board_is_ok(board));
+   
    // standard sort
 
    list_note(list);
@@ -210,7 +303,7 @@ void search_full_init(list_t * list, board_t * board) {
    // basic sort
 
    trans_move = MoveNone;
-   if (UseTrans) trans_retrieve(Trans,board->key,&trans_move,&trans_min_depth,&trans_max_depth,&trans_min_value,&trans_max_value);
+   /*if (UseTrans)*/ trans_retrieve(Trans,board->key,&trans_move,&trans_min_depth,&trans_max_depth,&trans_min_value,&trans_max_value);
 
    note_moves(list,board,0,trans_move);
    list_sort(list);
@@ -233,7 +326,7 @@ int search_full_root(list_t * list, board_t * board, int depth, int search_type)
    ASSERT(board_is_legal(board));
    ASSERT(depth>=1);
 
-   value = full_root(list,board,-ValueInf,+ValueInf,depth,0,search_type);
+   value = full_root(list,board,-ValueInf,+ValueInf,FRACT_DEPTH(depth),0,search_type);
 
    ASSERT(value_is_ok(value));
    ASSERT(LIST_VALUE(list,0)==value);
@@ -281,14 +374,14 @@ static int full_root(list_t * list, board_t * board, int alpha, int beta, int de
 
       move = LIST_MOVE(list,i);
 
-      SearchRoot->depth = depth;
+      SearchRoot->depth = REAL_DEPTH(depth);
       SearchRoot->move = move;
       SearchRoot->move_pos = i;
       SearchRoot->move_nb = LIST_SIZE(list);
 
       search_update_root();
 
-      new_depth = full_new_depth(depth,move,board,board_is_check(board)&&LIST_SIZE(list)==1,true, false);
+      new_depth = full_new_depth(depth,move,board,board_is_check(board)&&LIST_SIZE(list)==1,true, false, false);
 
       move_do(board,move,undo);
 
@@ -326,7 +419,7 @@ static int full_root(list_t * list, board_t * board, int alpha, int beta, int de
          } else { // alpha < value < beta => exact value
             SearchBest->flags = SearchExact;
          }
-         SearchBest->depth = depth;
+         SearchBest->depth = REAL_DEPTH(depth);
          pv_cat(SearchBest->pv,new_pv,move);
 
          search_update_best();
@@ -348,7 +441,7 @@ static int full_root(list_t * list, board_t * board, int alpha, int beta, int de
    ASSERT(SearchBest->move==LIST_MOVE(list,0));
    ASSERT(SearchBest->value==best_value);
 
-   if (UseTrans && best_value > old_alpha && best_value < beta) {
+   if (/*UseTrans && */best_value > old_alpha && best_value < beta) {
       pv_fill(SearchBest->pv,board);
    }
 
@@ -364,6 +457,12 @@ static int full_search(board_t * board, int alpha, int beta, int depth, int heig
 
    bool in_check;
    bool single_reply;
+   bool reduced;
+   bool rebel_reduction;
+   //bool razor_reduced;
+   bool threat;
+   bool bm_threat;
+
    int trans_move, trans_depth, trans_min_depth, trans_max_depth, trans_min_value, trans_max_value;
    int min_value, max_value;
    int old_alpha;
@@ -373,16 +472,15 @@ static int full_search(board_t * board, int alpha, int beta, int depth, int heig
    int played_nb;
    int i;
    int opt_value;
-   bool reduced;
-   //bool xreduced;
-   bool threat;
    int mb;
+   int FutilityMargin;
+   int remaining_depth;
+   int margin;
    attack_t attack[1];
    sort_t sort[1];
    undo_t undo[1];
    mv_t new_pv[HeightMax];
    mv_t played[256];
-   int FutilityMargin;
 
    ASSERT(board!=NULL);
    ASSERT(range_is_ok(alpha,beta));
@@ -395,7 +493,7 @@ static int full_search(board_t * board, int alpha, int beta, int depth, int heig
 
    // horizon?
 
-   if (depth <= 0) return full_quiescence(board,alpha,beta,0,height,pv);
+   if (depth < Fractional) return full_quiescence(board,alpha,beta,0,height,pv);
 
    // init
 
@@ -442,7 +540,7 @@ static int full_search(board_t * board, int alpha, int beta, int depth, int heig
 
    trans_move = MoveNone;
 
-   if (UseTrans && depth >= TransDepth) {
+   if (/*UseTrans && */depth >= TransDepth) {
 
       if (trans_retrieve(Trans,board->key,&trans_move,&trans_min_depth,&trans_max_depth,&trans_min_value,&trans_max_value)) {
 
@@ -452,25 +550,25 @@ static int full_search(board_t * board, int alpha, int beta, int depth, int heig
 
             if (UseMateValues) {
 
-               if (trans_min_value > +ValueEvalInf && trans_min_depth < depth) {
-                  trans_min_depth = depth;
+               if (trans_min_value > +ValueEvalInf && trans_min_depth < REAL_DEPTH(depth)) {
+                  trans_min_depth = REAL_DEPTH(depth);
                }
 
-               if (trans_max_value < -ValueEvalInf && trans_max_depth < depth) {
-                  trans_max_depth = depth;
+               if (trans_max_value < -ValueEvalInf && trans_max_depth < REAL_DEPTH(depth)) {
+                  trans_max_depth = REAL_DEPTH(depth);
                }
             }
 
             min_value = -ValueInf;
 
-            if (DEPTH_MATCH(trans_min_depth,depth)) {
+            if (DEPTH_MATCH(trans_min_depth,REAL_DEPTH(depth))) {
                min_value = value_from_trans(trans_min_value,height);
                if (min_value >= beta) return min_value;
             }
 
             max_value = +ValueInf;
 
-            if (DEPTH_MATCH(trans_max_depth,depth)) {
+            if (DEPTH_MATCH(trans_max_depth,REAL_DEPTH(depth))) {
                max_value = value_from_trans(trans_max_value,height);
                if (max_value <= alpha) return max_value;
             }
@@ -494,6 +592,7 @@ static int full_search(board_t * board, int alpha, int beta, int depth, int heig
    attack_set(attack,board);
    in_check = ATTACK_IN_CHECK(attack);
    threat = false;
+   bm_threat = false;
 
    // null-move pruning
 
@@ -502,11 +601,11 @@ static int full_search(board_t * board, int alpha, int beta, int depth, int heig
       if (!in_check
        && !value_is_mate(beta)
        && do_null(board)
-       && (!UseNullEval || depth <= NullReduction+1 || eval(board,alpha, beta) >= beta)) {
+       && (!UseNullEval || depth <= NullReduction+Fractional || eval(board,alpha, beta) >= beta)) {
 
          // null-move search
 
-         new_depth = depth - NullReduction - 1;
+         new_depth = depth - NullReduction - Fractional;
 
          move_do_null(board,undo);
          value = -full_search(board,-beta,-beta+1,new_depth,height+1,new_pv,NODE_OPP(node_type));
@@ -535,9 +634,31 @@ static int full_search(board_t * board, int alpha, int beta, int depth, int heig
          }
 
 
-		 // threat
-		 if (value == VALUE_MATE(height+2)) threat = true;
+	// mate threat
+	if (value == VALUE_MATE(height+2)) { threat = true; mate_threats++; }
+	
+	// same threat
+	if (value + 200 < alpha) {
 
+		if (move == board->bm_move[board->turn]) {
+			if (board->square[MOVE_TO(move)] != Empty) {	
+				if (VALUE_PIECE(board->square[MOVE_TO(move)]) == board->bm_value[board->turn]) { bm_threat = true; bm_threats++; }
+
+			} else {
+				if (VALUE_PIECE(board->square[MOVE_TO(move)]) == 0) { bm_threat = true; bm_threats++; }
+			}
+		}
+
+		board->bm_move[board->turn] = move;
+		if (board->square[MOVE_TO(move)] != Empty) { 
+			board->bm_value[board->turn] = VALUE_PIECE(board->square[MOVE_TO(move)]);
+		} else {
+			board->bm_value[board->turn] = 0;
+		}
+	} else {
+		board->bm_move[board->turn] = 0;
+		board->bm_value[board->turn] = 0;
+	}
 
          // pruning
 
@@ -553,6 +674,9 @@ static int full_search(board_t * board, int alpha, int beta, int depth, int heig
             goto cut;
          }
       }
+   } else {
+	board->bm_move[board->turn] = 0;
+	board->bm_value[board->turn] = 0;
    }
 
    // Internal Iterative Deepening
@@ -568,9 +692,11 @@ static int full_search(board_t * board, int alpha, int beta, int depth, int heig
       trans_move = new_pv[0];
    }
 
+   remaining_depth = height - REAL_DEPTH(depth);
+
    // move generation
 
-   sort_init(sort,board,attack,depth,height,trans_move);
+   sort_init(sort,board,attack,REAL_DEPTH(depth),height,trans_move);
 
    single_reply = false;
    if (in_check && LIST_SIZE(sort->list) == 1) single_reply = true; // HACK
@@ -584,7 +710,30 @@ static int full_search(board_t * board, int alpha, int beta, int depth, int heig
       // extensions
 
 	  //if (threat) new_depth++;
-      new_depth = full_new_depth(depth,move,board,single_reply,node_type==NodePV, threat);
+      new_depth = full_new_depth(depth,move,board,single_reply,node_type==NodePV, threat, bm_threat);
+
+      // rebel reduction
+      rebel_reduction = false;
+
+      if (use_rebel_reduction && remaining_depth > 2 && node_type != NodePV && !in_check && board->square[MOVE_TO(move)] == Empty && !MOVE_IS_PROMOTE(move)) { 
+
+	if (remaining_depth <= 4) margin = 500;
+	else if (remaining_depth <= 6) margin = 700;
+	else if (remaining_depth <= 8) margin = 975;
+	else margin = 1500;
+
+	opt_value = board->piece_material[White] - board->piece_material[Black];
+	if (COLOUR_IS_BLACK(board->turn)){ 
+		opt_value = -opt_value;
+	}
+
+	if (alpha > opt_value + margin) { 
+		new_depth -= Fractional; 
+		rebel_reductions++;
+		rebel_reduction = true;
+	}
+
+      }
 
       // history pruning
 
@@ -601,8 +750,9 @@ static int full_search(board_t * board, int alpha, int beta, int depth, int heig
                ASSERT(move!=trans_move);
                ASSERT(!move_is_tactical(move,board));
                ASSERT(!move_is_check(move,board));
-               new_depth--;
+               new_depth -= Fractional;
                reduced = true;
+	       history_cuts++;
 			   //if (UseExtendedHistory && value < HistoryBound && new_depth > 1){
 				 //  new_depth--;
 				   //xreduced = true;
@@ -611,21 +761,18 @@ static int full_search(board_t * board, int alpha, int beta, int depth, int heig
          }
       }
 
-      // recursive search
-
-      move_do(board,move,undo);
 
       // futility pruning
-
-	  if (UseFutility && depth <= 3 && node_type != NodePV && board->piece_size[COLOUR_OPP(board->turn)] > 3) {
+	//razor_reduced = false;
+	  if (UseFutility && depth < 4*Fractional && node_type != NodePV && board->piece_size[COLOUR_OPP(board->turn)] > 3) {
 
          if (!in_check && new_depth < depth && !move_is_tactical(move,board) && !move_is_dangerous(move,board)) {
 
             ASSERT(!move_is_check(move,board));
 
-			if (depth < 2)
+			if (depth < 2*Fractional)
 				FutilityMargin = FutilityMargin1;
-			else if (depth < 3)
+			else if (depth < 3*Fractional)
 				FutilityMargin = FutilityMargin2;
 			else
 				FutilityMargin = FutilityMargin3; 
@@ -653,10 +800,13 @@ static int full_search(board_t * board, int alpha, int beta, int depth, int heig
                   best_value = value;
                   PV_CLEAR(pv);
                } 
-			   if(depth >= 3 && board->piece_size[COLOUR_OPP(board->turn)] > 3)
-			       new_depth -= 1;
-			   else{ 
-      				   move_undo(board,move,undo);
+			   if(depth >= 3*Fractional && board->piece_size[COLOUR_OPP(board->turn)] > 3) {
+			       new_depth -= Fractional;
+				//razor_reduced = true;
+			       razor_cuts++;
+			   } else { 
+      				   //move_undo(board,move,undo);
+				   futility_cuts++;
 				   continue;
 			   }
             }
@@ -692,6 +842,9 @@ static int full_search(board_t * board, int alpha, int beta, int depth, int heig
          }
       } */
 
+      // recursive search
+
+      move_do(board,move,undo);
 
       if (node_type != NodePV || best_value == ValueNone) { // first move
          value = -full_search(board,-beta,-alpha,new_depth,height+1,new_pv,NODE_OPP(node_type));
@@ -708,13 +861,32 @@ static int full_search(board_t * board, int alpha, int beta, int depth, int heig
 
          ASSERT(node_type!=NodePV);
 
-         new_depth++;
+         new_depth += Fractional;
+	 history_research++;
          ASSERT(new_depth==depth-1);
 
 		 //if (UseExtendedHistory && xreduced) new_depth++;
 
          value = -full_search(board,-beta,-alpha,new_depth,height+1,new_pv,NODE_OPP(node_type));
       }
+
+      else if (rebel_reduction && value >= beta) {
+
+         ASSERT(node_type!=NodePV);
+
+         new_depth += Fractional;
+	 rebel_researchs++;
+
+         value = -full_search(board,-beta,-alpha,new_depth,height+1,new_pv,NODE_OPP(node_type));
+      } /*else if (razor_reduced && value >= beta) {
+
+         ASSERT(node_type!=NodePV);
+
+         new_depth += Fractional;
+	 razor_researchs++;
+
+         value = -full_search(board,-beta,-alpha,new_depth,height+1,new_pv,NODE_OPP(node_type));
+      }*/
 
       move_undo(board,move,undo);
 
@@ -753,7 +925,7 @@ cut:
 
    if (best_move != MoveNone) {
 
-      good_move(best_move,board,depth,height);
+      good_move(best_move,board,REAL_DEPTH(depth),height);
 
       if (best_value >= beta && !move_is_tactical(best_move,board)) {
 
@@ -771,10 +943,10 @@ cut:
 
    // transposition table
 
-   if (UseTrans && depth >= TransDepth) {
+   if (/*UseTrans && */depth >= TransDepth) {
 
       trans_move = best_move;
-      trans_depth = depth;
+      trans_depth = REAL_DEPTH(depth);
       trans_min_value = (best_value > old_alpha) ? value_to_trans(best_value,height) : -ValueInf;
       trans_max_value = (best_value < beta)      ? value_to_trans(best_value,height) : +ValueInf;
 
@@ -830,11 +1002,11 @@ static int full_no_null(board_t * board, int alpha, int beta, int depth, int hei
 
    // move loop
 
-   sort_init(sort,board,attack,depth,height,trans_move);
+   sort_init(sort,board,attack,REAL_DEPTH(depth),height,trans_move);
 
    while ((move=sort_next(sort)) != MoveNone) {
 
-      new_depth = full_new_depth(depth,move,board,false,false, false);
+      new_depth = full_new_depth(depth,move,board,false,false, false, false);
 
       move_do(board,move,undo);
       value = -full_search(board,-beta,-alpha,new_depth,height+1,new_pv,NODE_OPP(node_type));
@@ -937,7 +1109,7 @@ static int full_quiescence(board_t * board, int alpha, int beta, int depth, int 
 
    if (in_check) {
       ASSERT(depth<0);
-      depth++; // in-check extension
+      depth += Fractional; // in-check extension
    }
 
    // height limit
@@ -977,7 +1149,7 @@ static int full_quiescence(board_t * board, int alpha, int beta, int depth, int 
 
    // move loop
 
-   sort_init_qs(sort,board,attack,depth>=CheckDepth);
+   sort_init_qs(sort,board,attack,REAL_DEPTH(depth)>=CheckDepth);
 
    while ((move=sort_next_qs(sort)) != MoveNone) {
 
@@ -1012,14 +1184,14 @@ static int full_quiescence(board_t * board, int alpha, int beta, int depth, int 
                   best_value = value;
                   PV_CLEAR(pv);
                }
-
+	       delta_cuts++;
                continue;
             }
          }
       }
 
       move_do(board,move,undo);
-      value = -full_quiescence(board,-beta,-alpha,depth-1,height+1,new_pv);
+      value = -full_quiescence(board,-beta,-alpha,depth-Fractional,height+1,new_pv);
       move_undo(board,move,undo);
 
       if (value > best_value) {
@@ -1049,10 +1221,9 @@ cut:
 
 // full_new_depth()
 
-static int full_new_depth(int depth, int move, board_t * board, bool single_reply, bool in_pv, bool threat) { // this will all change after fract ply is in place and will need to be tuned
+static int full_new_depth(int depth, int move, board_t * board, bool single_reply, bool in_pv, bool threat, bool same_threat) { 
 
    int new_depth;
-
    ASSERT(depth_is_ok(depth));
    ASSERT(move_is_ok(move));
    ASSERT(board!=NULL);
@@ -1061,28 +1232,58 @@ static int full_new_depth(int depth, int move, board_t * board, bool single_repl
 
    ASSERT(depth>0);
 
-   new_depth = depth - 1;
+   new_depth = 0;
 
-   if ((in_pv && MOVE_TO(move) == board->cap_sq // recapture
-              && see_move(move,board) > 0 /* && ABS(VALUE_PIECE(board->square[MOVE_TO(move)])-VALUE_PIECE(board->square[MOVE_FROM(move)])) <= 250 */)
-    	|| (in_pv && PIECE_IS_PAWN(MOVE_PIECE(move,board))
-              && PAWN_RANK(MOVE_TO(move),board->turn) == Rank7
-              && see_move(move,board) >= 0)
-	|| (in_pv && threat)
-	|| move_is_check(move,board) 
-	|| (single_reply && ExtendSingleReply)) {
-      new_depth++;
+
+   if (in_pv && MOVE_TO(move) == board->cap_sq // recapture
+              && see_move(move,board) > 0) {
+	new_depth += recap_ext;
    }
 
-/*
-   if (move_is_check(move,board) || (single_reply && ExtendSingleReply)) {
-	   new_depth++;
-	}*/
+   if (in_pv && PIECE_IS_PAWN(MOVE_PIECE(move,board))
+              && PAWN_RANK(MOVE_TO(move),board->turn) == Rank7
+              && see_move(move,board) >= 0) {
+	new_depth += pawn_ext;
+   } /*else if (in_pv && PIECE_IS_PAWN(MOVE_PIECE(move,board)) 
+		&& is_passed(board, MOVE_TO(move)) 
+		&& see_move(move,board) >= 0) {
+	new_depth += ppush_ext;
+   }*/
+
+   if (in_pv && threat) {
+	new_depth += threat_ext;
+   }
+
+   if (move_is_check(move,board)) {
+	new_depth += check_ext;
+   }
+
+   if (single_reply && ExtendSingleReply) {
+	new_depth += single_reply_ext;
+   }
+
+   if (exclude_bme_from_cap) {
+   	if (new_depth > ext_cap) new_depth = ext_cap;
+
+  	if (use_bme && same_threat) {
+		new_depth += bm_ext;
+   	}
+   } else {
+  	if (use_bme && same_threat) {
+		new_depth += bm_ext;
+   	}
+
+   	if (new_depth > ext_cap) new_depth = ext_cap;
+
+   }
+
 
    ASSERT(new_depth>=0&&new_depth<=depth);
 
+   new_depth += depth - Fractional;
    return new_depth;
 }
+
 
 // do_null()
 
@@ -1117,7 +1318,7 @@ static void pv_fill(const mv_t pv[], board_t * board) {
    ASSERT(pv!=NULL);
    ASSERT(board!=NULL);
 
-   ASSERT(UseTrans);
+   //ASSERT(UseTrans);
 
    move = *pv;
 
@@ -1237,6 +1438,37 @@ static bool simple_stalemate(const board_t * board) {
 
    return true;
 }
+
+// is_passed()
+/*
+static bool is_passed(const board_t * board, int to) {
+
+   int t2;
+   int me, opp;
+   int file, rank;
+
+   me = COLOUR_IS_WHITE(board->turn);
+   opp = COLOUR_OPP(me);
+   file = SQUARE_FILE(to);
+   rank = PAWN_RANK(to,me);
+
+   //t1 = board->pawn_file[me][file-1] | board->pawn_file[me][file+1];
+   t2 = board->pawn_file[me][file] | BitRev[board->pawn_file[opp][file]];
+
+   
+   // passed pawns
+   if ((t2 & BitGT[rank]) == 0) {
+
+	if (((BitRev[board->pawn_file[opp][file-1]] | BitRev[board->pawn_file[opp][file+1]]) & BitGT[rank]) == 0) {
+		return true;
+
+   	}
+   }
+
+   return false;
+
+}
+*/
 
 // end of search_full.cpp
 

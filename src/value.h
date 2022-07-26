@@ -15,11 +15,11 @@ const int ValuePawn   = 100;   // was 100
 const int ValueKnight = 325;   // was 300
 const int ValueBishop = 325;   // was 300
 const int ValueRook   = 500;   // was 500
-const int ValueQueen  = 1000;  // was 900
+const int ValueQueen  = 975;  // was 900
 const int ValueKing   = 10000; // was 10000
 
 const int ValueNone    = -32767;
-const int ValueDraw    = 0;
+/*const*/ extern int ValueDraw;
 const int ValueMate    = 30000;
 const int ValueInf     = ValueMate;
 const int ValueEvalInf = ValueMate - 256; // handle mates upto 255 plies
