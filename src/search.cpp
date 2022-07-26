@@ -29,7 +29,6 @@
 // constants
 
 static const bool UseCpuTime = false; // false
-static const bool UseEvent = true; // true
 
 static const bool UseShortSearch = true;
 static const int ShortSearchDepth = 1;
@@ -40,14 +39,11 @@ static const bool DispDepthEnd = true; // true
 static const bool DispRoot = true; // true
 static const bool DispStat = true; // true
 
-static const bool UseEasy = true; // singular move
 static const int EasyThreshold = 150;
 static const double EasyRatio = 0.20;
 
-static const bool UseEarly = true; // early iteration end
 static const double EarlyRatio = 0.60;
 
-static const bool UseBad = true;
 static const int BadThreshold = 50; // 50
 static const bool UseExtension = true;
 
@@ -269,7 +265,7 @@ void search() {
 			 SearchRoot->easy = true;
 		  }
 
-		  if (UseBad && depth > 1) {
+		  if (depth > 1) {
 			 SearchRoot->bad_2 = SearchRoot->bad_1;
 			 SearchRoot->bad_1 = false;
 			 ASSERT(SearchRoot->bad_2==(SearchBest->value<=SearchRoot->last_value-BadThreshold));
@@ -290,8 +286,7 @@ void search() {
 			 SearchRoot->flag = true;
 		  }
 
-		  if (UseEasy
-		   && SearchInput->time_is_limited
+		  if (SearchInput->time_is_limited
 		   && SearchCurrent->time >= SearchInput->time_limit_1 * EasyRatio
 		   && SearchRoot->easy) {
 			 ASSERT(!SearchRoot->bad_2);
@@ -299,8 +294,7 @@ void search() {
 			 SearchRoot->flag = true;
 		  }
 
-		  if (UseEarly
-		   && SearchInput->time_is_limited
+		  if (SearchInput->time_is_limited
 		   && SearchCurrent->time >= SearchInput->time_limit_1 * EarlyRatio
 		   && !SearchRoot->bad_2
 		   && !SearchRoot->change) {
@@ -433,7 +427,7 @@ void search_update_best() {
 
    // update time-management info
 
-   if (UseBad && SearchBest[SearchCurrent->multipv].depth > 1) {
+   if (SearchBest[SearchCurrent->multipv].depth > 1) {
       if (SearchBest[SearchCurrent->multipv].value <= SearchRoot->last_value - BadThreshold) {
          SearchRoot->bad_1 = true;
          SearchRoot->easy = false;
@@ -499,7 +493,7 @@ void search_check() {
 
    search_send_stat();
 
-   if (UseEvent) event();
+   event();
 
    if (SearchInput->depth_is_limited
     && SearchRoot->depth > SearchInput->depth_limit) {

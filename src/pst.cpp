@@ -23,6 +23,7 @@ static const int A6=050, B6=051, C6=052, D6=053, E6=054, F6=055, G6=056, H6=057;
 static const int A7=060, B7=061, C7=062, D7=063, E7=064, F7=065, G7=066, H7=067;
 static const int A8=070, B8=071, C8=072, D8=073, E8=074, F8=075, G8=076, H8=077;
 
+/*
 static const int alt_pawn_opening[64] = {
 	 0, 0, 0,  0,  0, 0, 0, 0,
 	 1, 2, 3, -5, -5, 3, 2, 1,
@@ -32,17 +33,28 @@ static const int alt_pawn_opening[64] = {
 	 9,14,23, 34, 34,23,14, 9,
 	10,15,25, 35, 35,25,15,10,
 	 0, 0, 0,  0,  0, 0, 0, 0
+};*/
+
+static const int alt_pawn_opening[64] = {
+	 0,  0, 0,  0,  0, 0, 0, 0,
+    -10,-4, 0, -5, -5, 0,-4,-10,
+	-10,-4, 0,  8,  5, 0,-4,-10,
+	-10,-4, 0, 16, 12, 0,-4,-10,
+	-10,-4, 0, 16, 12, 0,-4,-10,
+	-10,-4, 0, 16, 12, 0,-4,-10,
+	-10,-4, 0, 16, 12, 0,-4,-10,
+	 0,  0, 0,  0,  0, 0, 0, 0
 };
 
 static const int alt_pawn_endgame[64] = {
 	 0, 0, 0, 0, 0, 0, 0, 0,
-	 1, 2, 3, 4, 4, 1, 2, 1,
-	 3, 4, 5, 6, 6, 5, 4, 3,
-	 5, 6, 7, 8, 8, 7, 6, 5,
-	 7, 8, 9,10,10, 9, 8, 7,
-	 9,10,11,12,12,11,10, 9,
-	10,11,12,13,13,12,11,10,
-	 0, 0, 0, 0, 0, 0, 0, 0
+	-5,-2, 0, 0, 0, 0,-2,-5,
+	-5,-2, 0, 3, 3, 0,-2,-5,
+	-5,-2, 1, 7, 7, 1,-2,-5,
+	-5,-2, 1, 7, 7, 1,-2,-5,
+	-5,-2, 1, 7, 7, 1,-2,-5,
+	-5,-2, 1, 7, 7, 1,-2,-5,
+	 0, 0, 0, 0, 0, 0, 0,-5
 };
 
 static const int alt_knight[64] = {
@@ -70,7 +82,7 @@ static const int alt_bishop[64] = {
 // constants and variables
 
 static /* const */ int PieceActivityWeight = 256; // 100%
-static /* const */ int KingSafetyWeight = 256; // 100%
+static const int KingSafetyWeight = 256; // 100%
 static /* const */ int PawnStructureWeight = 256; // 100%
 static bool alt_pawn_table = false;
 static bool alt_knight_table = false;
@@ -156,7 +168,7 @@ void pst_init() {
    // UCI options
 
    PieceActivityWeight = (option_get_int("Piece Activity") * 256 + 50) / 100;
-   KingSafetyWeight    = (option_get_int("King Safety")    * 256 + 50) / 100;
+   //KingSafetyWeight    = (option_get_int("King Safety")    * 256 + 50) / 100;
    PawnStructureWeight = (option_get_int("Pawn Structure") * 256 + 50) / 100;
    alt_pawn_table =  option_get_bool("Alt Pawn SQT");
    alt_knight_table =  option_get_bool("Alt Knight SQT");

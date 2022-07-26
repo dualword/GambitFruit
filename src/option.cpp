@@ -50,7 +50,7 @@ static option_t Option[] = {
    { "History Threshold",   true, "70",   "spin",  "min 0 max 100", NULL },
    { "History Research on Beta",     true, "true", "check", "", NULL },
 
-   { "Rebel Reductions",     true, "false", "check", "", NULL },
+   { "Rebel Reductions",     true, "true", "check", "", NULL },
 
    { "Futility Pruning", true, "true", "check", "", NULL },
    { "Quick Futility eval", true, "false", "check", "", NULL },
@@ -60,7 +60,7 @@ static option_t Option[] = {
    { "Delta Pruning", true, "true", "check", "", NULL },
    { "Delta Margin",  true, "50",    "spin",  "min 0 max 500", NULL },
 
-   { "Quiescence Check Plies", true, "1", "spin", "min 0 max 2", NULL },
+   { "Quiescence Check Plies", true, "1", "spin", "min 0 max 5", NULL },
 
    { "Alt Pawn SQT", true, "false", "check", "", NULL },
    { "Alt Knight SQT", true, "false", "check", "", NULL },
@@ -69,10 +69,11 @@ static option_t Option[] = {
    { "Chess Knowledge", true, "100", "spin", "min 0 max 500", NULL },
    { "Piece Activity",  true, "100", "spin", "min 0 max 500", NULL },
    { "Pawn Shelter",    true, "100", "spin", "min 0 max 500", NULL },
-   { "King Safety",     true, "100", "spin", "min 0 max 500", NULL },
+   { "Pawn Storm",      true, "100", "spin", "min 0 max 500", NULL },
+   { "King Attack",     true, "100", "spin", "min 0 max 500", NULL },
    { "Pawn Structure",  true, "100", "spin", "min 0 max 500", NULL },
    { "Passed Pawns",    true, "100", "spin", "min 0 max 500", NULL },
-
+/*
    { "knight tropism opening",  	true, "4",    "spin",  "min 0 max 10", NULL },
    { "bishop tropism opening",  	true, "2",    "spin",  "min 0 max 10", NULL },
    { "rook tropism opening",  		true, "2",    "spin",  "min 0 max 10", NULL },
@@ -82,7 +83,7 @@ static option_t Option[] = {
    { "bishop tropism endgame",  	true, "1",    "spin",  "min 0 max 10", NULL },
    { "rook tropism endgame",  		true, "1",    "spin",  "min 0 max 10", NULL },
    { "queen tropism endgame",  		true, "3",    "spin",  "min 0 max 10", NULL },
-
+*/
    { "Opening Pawn Value",	true, "80", "spin", "min 0 max 10000", NULL },
    { "Opening Knight Value",	true, "320", "spin", "min 0 max 10000", NULL },
    { "Opening Bishop Value",	true, "325", "spin", "min 0 max 10000", NULL },

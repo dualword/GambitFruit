@@ -772,7 +772,7 @@ static int full_search(board_t * board, int alpha, int beta, int depth, int heig
 			 value = -full_search(board,-beta,-alpha,new_depth,height+1,new_pv,NODE_OPP(node_type));
 		} 
 	  } else {
-		if (reduced && value >= alpha) {
+		if (reduced && value > alpha) {
 
 	         ASSERT(node_type!=NodePV);
 

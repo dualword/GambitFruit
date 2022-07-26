@@ -79,9 +79,9 @@ const int KnightOutpostMatrix[2][256] = {
 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 };
 
-static int lazy_eval_cutoff = 200; /* Thomas */
+static int lazy_eval_cutoff = 50; 
 static bool KingSafety = false; // true
-static int KingSafetyMargin = 1600;
+//static int KingSafetyMargin = 1600;
 static bool king_is_safe[ColourNb];
 
 static /* const */ int PieceActivityWeight = 256; // 100%
@@ -112,8 +112,7 @@ static const int RookKingFileOpening = 20;
 static const int RookOnBadPawnFileOpening = 8;
 static const int RookOnBadPawnFileEndgame = 8;
 
-static const int KingAttackOpening = 20; // was 20
-static const int KingAttackOpening1 = 20; // was 20
+static /* const */ int KingAttackOpening = 20; // was 20
 
 static const int knight_tropism_opening = 3;
 static const int bishop_tropism_opening = 2;
@@ -125,7 +124,7 @@ static const int bishop_tropism_endgame = 1;
 static const int rook_tropism_endgame = 1;
 static const int queen_tropism_endgame = 4;
 
-static const int StormOpening = 10;
+static /* const */ int StormOpening = 10;
 
 static const int Rook7thOpening = 20;
 static const int Rook7thEndgame = 40;
@@ -137,9 +136,6 @@ static const int TrappedBishop = 100;
 static const int BlockedBishop = 50;
 static const int BlockedRook = 50;
 static const int BlockedCenterPawn = 10;
-
-static const int ProtectedPassedOpening = 10;
-static const int ProtectedPassedEndgame = 20;
 
 static const int PassedOpeningMin = 10;
 static const int PassedOpeningMax = 70;
@@ -186,7 +182,7 @@ static void draw_init_list     (int list[], const board_t * board, int pawn_colo
 static bool draw_krpkr         (const int list[], int turn);
 static bool draw_kbpkb         (const int list[], int turn);
 
-static int  shelter_square     (const board_t * board, const material_info_t * mat_info, int square, int colour);
+static int  shelter_square     (const board_t * board, int square, int colour);
 static int  shelter_file       (const board_t * board, int file, int rank, int colour);
 
 static int  storm_file         (const board_t * board, int file, int colour);
@@ -205,9 +201,12 @@ void eval_init() {
    // UCI options
 
    PieceActivityWeight = (option_get_int("Piece Activity") * 256 + 50) / 100;
-   KingSafetyWeight    = (option_get_int("King Safety")    * 256 + 50) / 100;
+   //KingSafetyWeight    = (option_get_int("King Safety")    * 256 + 50) / 100;
    PassedPawnWeight    = (option_get_int("Passed Pawns")   * 256 + 50) / 100;
    ShelterOpening      = (option_get_int("Pawn Shelter")   * 256 + 50) / 100;
+   StormOpening		   = (10 * option_get_int("Pawn Storm")) / 100;
+   KingAttackOpening   = (20 * option_get_int("King Attack")) / 100;
+
    if (option_get_int("Chess Knowledge") == 500) lazy_eval_cutoff = ValueEvalInf;
    else lazy_eval_cutoff = (50 * option_get_int("Chess Knowledge")) / 100;
 
@@ -332,17 +331,17 @@ int eval(/*const*/ board_t * board, int alpha, int beta, bool do_le, bool in_che
 	   int score;
 		int piece;
 		int psquare;
-		int sq_copy[64];
+		//int sq_copy[64];
 
-		for (from=0; from < 64; ++from) {
-			sq_copy[from] = board->square[SQUARE_FROM_64(from)];
-		}
+		//for (from=0; from < 64; ++from) {
+		//	sq_copy[from] = board->square[SQUARE_FROM_64(from)];
+		//}
 
 		for (from=0; from < 64; ++from) {
 			;
-			if (sq_copy[from] == Empty) continue;
+			if (board->square[SQUARE_FROM_64(from)] == Empty) continue;
 			
-			switch (sq_copy[from]) {
+			switch (board->square[SQUARE_FROM_64(from)]) {
 				case WP: ADD_PIECE(_WPAWN); break;
 				case BP: ADD_PIECE(_BPAWN); break;
 				case WN: ADD_PIECE(_WKNIGHT); break;
@@ -368,7 +367,7 @@ int eval(/*const*/ board_t * board, int alpha, int beta, bool do_le, bool in_che
 			if (score == 0) {
 				return ValueDraw;
 			} else {
-				return score*5;
+				return score;
 			}
 		}
 	}
@@ -376,6 +375,7 @@ int eval(/*const*/ board_t * board, int alpha, int beta, bool do_le, bool in_che
 	/*
 	End bitbases
 	*/
+
 
 
    opening += mat_info->opening;
@@ -489,7 +489,7 @@ int eval(/*const*/ board_t * board, int alpha, int beta, bool do_le, bool in_che
    ASSERT(!value_is_mate(eval));
 
    // Tempo
-   tempo = ((10 * (256 - phase)) + (20 * phase)) / 256; 
+   tempo = 10;//((10 * (256 - phase)) + (20 * phase)) / 256; 
 
    // Tempo draw bound
    if (COLOUR_IS_WHITE(board->turn)) {
@@ -1043,19 +1043,19 @@ static void eval_king(const board_t * board, const material_info_t * mat_info, i
 
 		  // king
 
-		  penalty_1 = shelter_square(board,mat_info,KING_POS(board,me),me);
+		  penalty_1 = shelter_square(board,KING_POS(board,me),me);
 		  
 		  // castling
 
           penalty_2 = penalty_1;
 
           if ((board->flags & FlagsWhiteKingCastle) != 0) {
-             tmp = shelter_square(board,mat_info,G1,me);
+             tmp = shelter_square(board,G1,me);
              if (tmp < penalty_2) penalty_2 = tmp;
 		  }
 
           if ((board->flags & FlagsWhiteQueenCastle) != 0) {
-             tmp = shelter_square(board,mat_info,B1,me);
+             tmp = shelter_square(board,B1,me);
              if (tmp < penalty_2) penalty_2 = tmp;
 		  }
 
@@ -1103,19 +1103,19 @@ static void eval_king(const board_t * board, const material_info_t * mat_info, i
 
           // king
 
-          penalty_1 = shelter_square(board,mat_info,KING_POS(board,me),me);
+          penalty_1 = shelter_square(board,KING_POS(board,me),me);
 		  
           // castling
 
           penalty_2 = penalty_1;
 
           if ((board->flags & FlagsBlackKingCastle) != 0) {
-             tmp = shelter_square(board,mat_info,G8,me);
+             tmp = shelter_square(board,G8,me);
              if (tmp < penalty_2) penalty_2 = tmp;
 		  }
 
           if ((board->flags & FlagsBlackQueenCastle) != 0) {
-             tmp = shelter_square(board,mat_info,B8,me);
+             tmp = shelter_square(board,B8,me);
              if (tmp < penalty_2) penalty_2 = tmp;
 		  }
 
@@ -1168,18 +1168,15 @@ static void eval_king(const board_t * board, const material_info_t * mat_info, i
 
             ASSERT(piece_nb>=0&&piece_nb<16);
 
-			if (op[colour] >= -22) //  Thomas king safe?
-				op[colour] -= (attack_tot * KingAttackOpening * KingAttackWeight[piece_nb]) / 256;
-			else
-				op[colour] -= (attack_tot * KingAttackOpening1 * KingAttackWeight[piece_nb]) / 256;
-			
+			op[colour] -= (attack_tot * KingAttackOpening * KingAttackWeight[piece_nb]) / 256;
+				
          }
       }
    
    // update
 
-   *opening += ((op[White] - op[Black]) * KingSafetyWeight) / 256;
-   *endgame += ((eg[White] - eg[Black]) * KingSafetyWeight) / 256;
+   *opening += (op[White] - op[Black]);
+   *endgame += (eg[White] - eg[Black]);
 }
 
 // eval_passer()
@@ -1749,7 +1746,7 @@ static bool draw_kbpkb(const int list[], int turn) {
 
 // shelter_square()
 
-static int shelter_square(const board_t * board, const material_info_t * mat_info, int square, int colour) {
+static int shelter_square(const board_t * board, int square, int colour) {
 
    int penalty;
    int file, rank;
@@ -1763,9 +1760,9 @@ static int shelter_square(const board_t * board, const material_info_t * mat_inf
    file = SQUARE_FILE(square);
    rank = PAWN_RANK(square,colour);
 
-   penalty += shelter_file(board,file,rank,colour) * 2;
-   if (file != FileA) penalty += shelter_file(board,file-1,rank,colour);
-   if (file != FileH) penalty += shelter_file(board,file+1,rank,colour);
+   penalty += (shelter_file(board,file,rank,colour) * 2);
+   if (file != FileA) penalty += (shelter_file(board,file-1,rank,colour));
+   if (file != FileH) penalty += (shelter_file(board,file+1,rank,colour));
 
    if (penalty == 0) penalty = 11; // weak back rank
 
